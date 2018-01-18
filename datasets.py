@@ -13,14 +13,14 @@ class GeneDataset(Dataset):
         data_subtype = os.path.join(root_dir, data_subtype)
 
         # Load the dataset
-        data, data_type, data_subtype = np.load(data_path), np.load(data_type_path), np.load(data_subtype)
+        self.data, self.data_type, self.data_subtype = np.load(data_path), np.load(data_type_path), np.load(data_subtype)
 
-        self.nb_gene = data.shape[0]
-        self.nb_tissue = len(set(data_type))
-        self.nb_patient = data.shape[1]
+        self.nb_gene = self.data.shape[0]
+        self.nb_tissue = len(set(self.data_type))
+        self.nb_patient = self.data.shape[1]
 
         # TODO: for proper pytorch form, we should probably do that on the fly, but heh. todo future me.
-        self.X_data, self.Y_data = self.dataset_make(data, log_transform=True)
+        self.X_data, self.Y_data = self.dataset_make(self.data, log_transform=True)
         #import ipdb; ipdb.set_trace()
 
         self.root_dir = root_dir
