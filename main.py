@@ -25,7 +25,8 @@ def build_parser():
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
 
     # Model specific options
-    parser.add_argument('--layer_size', default=[10, 10], type=int, nargs='+', help='Number of convolution layer in the CGN.')
+    parser.add_argument('--layers_size', default=[150, 100, 75, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
+    parser.add_argument('--emb_size', default=2, type=int, help='The size of the embeddings.')
     return parser
 
 def parse_args(argv):
@@ -45,7 +46,6 @@ def main(argv=None):
     param = vars(opt).copy()
     # Removing a bunch of useless tag
     exp_dir = None # TODO: do
-
     # TODO: set the seed
 
     # creating the dataset
@@ -54,28 +54,30 @@ def main(argv=None):
 
     # Creating a model
     print "Getting the model..."
-    my_model = models.get_model(opt)
+    # I might understand something wrong here, but shouldn't be 30 id, instead of 800?
+    # Or is the it is a cross product between tissue and patient?
+    my_model = models.get_model(opt, dataset.dataset.nb_gene, dataset.dataset.nb_patient)
     print "Our model:"
     print my_model
 
     # Training optimizer and stuff
     criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.SGD(my_model.parameters(), lr=opt.lr, momentum=opt.momentum) # TODO use ADAM or something. weight decay.
+    optimizer = torch.optim.Adam(my_model.parameters(), lr=opt.lr) # TODO use ADAM or something. weight decay.
 
-    if opt.on_cuda:
+    if opt.cuda:
         print "Putting the model on gpu..."
         my_model.cuda()
 
     # For the loggind and stuff. TODO: do.
-    exp_dir = None
-    if not os.path.exists(exp_dir):
-        os.mkdir(exp_dir)
-
-        # dumping the options
-        pickle.dump(opt, open(os.path.join(exp_dir, 'options.pkl'), 'wb'))
-        print "We will log everything in ", exp_dir
-    else:
-        print "Nothing will be log, everything will only be shown on screen."
+    # exp_dir = None
+    # if not os.path.exists(exp_dir):
+    #     os.mkdir(exp_dir)
+    #
+    #     # dumping the options
+    #     pickle.dump(opt, open(os.path.join(exp_dir, 'options.pkl'), 'wb'))
+    #     print "We will log everything in ", exp_dir
+    # else:
+    #     print "Nothing will be log, everything will only be shown on screen."
 
     # The training.
     for t in range(opt.epoch):
@@ -89,7 +91,7 @@ def main(argv=None):
             inputs = Variable(inputs, requires_grad=False).float()
             targets = Variable(targets, requires_grad=False).float()
 
-            if opt.on_cuda:
+            if opt.cuda:
                 inputs = inputs.cuda()
                 targets = targets.cuda()
 
@@ -98,14 +100,15 @@ def main(argv=None):
 
             # Compute and print loss
             loss = criterion(y_pred, targets)
-            print "Done epoch {}. Loss: {}".format(t, loss)
-
+            # TODO: the logging here.
+            if (no_b % 10000) == 0:
+                print "Done epoch {}, minibatch {}/{}. Loss: {}".format(t, no_b, len(dataset), loss.data[0])
             # Zero gradients, perform a backward pass, and update the weights.
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            # TODO: the logging here.
+
 
     print "Done!"
 

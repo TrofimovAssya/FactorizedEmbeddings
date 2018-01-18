@@ -15,11 +15,13 @@ class GeneDataset(Dataset):
         # Load the dataset
         data, data_type, data_subtype = np.load(data_path), np.load(data_type_path), np.load(data_subtype)
 
-        self.nb_genes = data.shape[0]
+        self.nb_gene = data.shape[0]
+        self.nb_tissue = len(set(data_type))
         self.nb_patient = data.shape[1]
 
-        # TODO: for proper pytorch form, we should probably do that on the fly, but heh. todo.
+        # TODO: for proper pytorch form, we should probably do that on the fly, but heh. todo future me.
         self.X_data, self.Y_data = self.dataset_make(data, log_transform=True)
+        #import ipdb; ipdb.set_trace()
 
         self.root_dir = root_dir
         self.transform = transform # heh
@@ -47,7 +49,7 @@ class GeneDataset(Dataset):
         X_data = np.transpose([np.tile(indices_g, len(indices_p1)), np.repeat(indices_p1, len(indices_g))])
         Y_data = gene_exp[X_data[:, 0], X_data[:, 1]]
 
-        print (Y_data.shape)
+        print "Total number of examples: ", Y_data.shape
 
         if log_transform:
             Y_data = np.log10(Y_data + 1)
@@ -62,7 +64,7 @@ def get_dataset(opt):
     else:
         raise NotImplementedError()
 
-    #TODO: check the num_worker, might be important later on.
+    #TODO: check the num_worker, might be important later on, for when we will use a bunch of big files.
     dataloader = DataLoader(dataset, batch_size=opt.batch_size,
                             shuffle=True, num_workers=4)
     return dataloader
