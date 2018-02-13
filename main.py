@@ -130,11 +130,10 @@ def main(argv=None):
             optimizer.step()
 
 
-
-
     print "Done!"
 
-    #TODO: end of training
+    #TODO: end of training, save the model and blah.
+
 
 if __name__ == '__main__':
     main()
