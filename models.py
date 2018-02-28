@@ -24,18 +24,20 @@ from torch import nn
 
 class FactorizedMLP(nn.Module):
 
-    def __init__(self, layers_size, nb_gene, nb_patient, emb_size=2):
+    def __init__(self, layers_size, inputs_size, emb_size=2):
         super(FactorizedMLP, self).__init__()
 
         self.layers_size = layers_size
         self.emb_size = emb_size
-        self.nb_gene = nb_gene
-        self.nb_patient = nb_patient
+        self.inputs_size = inputs_size
+
 
         # The embedding
         # TODO: At one point we will probably need to refactor that for it to be more general. Maybe.
-        self.gene_embedding = nn.Embedding(nb_gene, emb_size)
-        self.patient_embedding = nn.Embedding(nb_patient, emb_size)
+        assert len(inputs_size) == 2
+
+        self.emb_1 = nn.Embedding(inputs_size[0], emb_size)
+        self.emb_2 = nn.Embedding(inputs_size[1], emb_size)
 
         # The list of layers.
         layers = []
@@ -49,20 +51,23 @@ class FactorizedMLP(nn.Module):
         # Last layer
         self.last_layer = nn.Linear(dim[-1], 1)
 
+    def get_embeddings(self, x):
 
+        gene, patient = x[:, 0], x[:, 1]
+        # Embedding.
+        gene = self.emb_1(gene.long())
+        patient = self.emb_2(patient.long())
+
+        return gene, patient
 
     def forward(self, x):
 
-        #import ipdb; ipdb.set_trace()
 
-        gene, patient = x[:, 0], x[:, 1]
-
-        # Embedding.
-        gene = self.gene_embedding(gene.long())
-        tissue = self.tissue_embedding(patient.long())
+        # Get the embeddings
+        emb_1, emb_2 = self.get_embeddings(x)
 
         # Forward pass.
-        mlp_input = torch.cat([gene, tissue], 1)
+        mlp_input = torch.cat([emb_1, emb_2], 1)
 
         # TODO: the proper way in pytorch is to use a Sequence layer.
         for layer in self.mlp_layers:
@@ -73,15 +78,38 @@ class FactorizedMLP(nn.Module):
 
         return mlp_output
 
+class BagFactorizedMLP(FactorizedMLP):
 
-def get_model(opt, nb_gene, nb_patient):
+    '''
+    Simple bag of words approach. Each kmers is a word. We only sum them.
+    '''
+
+    def get_embeddings(self, x):
+
+        kmer, patient = x[:, :-1], x[:, -1]
+        # Embedding.
+        kmer = self.emb_1(kmer.squeeze(-1).long())
+        patient = self.emb_2(patient.long())
+
+        # Sum the embeddings (TODO: try fancy RNN and stuff)
+        kmer = kmer.sum(dim=1)
+        patient = patient.sum(dim=1)
+
+        return kmer, patient
+
+def get_model(opt, inputs_size):
 
     # All of the different models.
 
     # TODO: find a way to remove the if.
     if opt.model == 'factor':
-        model = FactorizedMLP(layers_size=opt.layers_size, emb_size=opt.emb_size, nb_gene=nb_gene, nb_patient=nb_patient)
+        model_class = FactorizedMLP
+    elif opt.model == 'bag':
+        model_class = BagFactorizedMLP
     else:
         raise NotImplementedError()
+
+
+    model = model_class(layers_size=opt.layers_size, emb_size=opt.emb_size, inputs_size=inputs_size)
 
     return model

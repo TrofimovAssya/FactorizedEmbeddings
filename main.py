@@ -20,13 +20,13 @@ def build_parser():
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--data-dir', default='./data/', help='The folder contening the dataset.')
     parser.add_argument('--save-dir', default='./testing123/', help='The folder where everything will be saved.')
-    parser.add_argument('--dataset', choices=['gene'], default='gene', help='Which dataset to use.')
-    parser.add_argument('--model', choices=['factor'], default='factor', help='Which model to use.')
-    parser.add_argument('--cuda', action='store_true', help='If we want to run on gpu.') # TODO: should probably be cpu instead.
+    parser.add_argument('--dataset', choices=['gene', 'kmer'], default='gene', help='Which dataset to use.')
+    parser.add_argument('--model', choices=['factor', 'bag'], default='factor', help='Which model to use.')
+    parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
 
     # Model specific options
-    parser.add_argument('--layers_size', default=[150, 100, 75, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
+    parser.add_argument('--layers-size', default=[150, 100, 75, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
     parser.add_argument('--emb_size', default=2, type=int, help='The size of the embeddings.')
     parser.add_argument('--weight-decay', default=0., type=float, help='The size of the embeddings.')
     return parser
@@ -50,7 +50,7 @@ def main(argv=None):
     # Removing a bunch of useless tag
     del param['data_dir']
     del param['save_dir']
-    del param['cuda']
+    del param['cpu']
     del param['epoch']
     del param['batch_size']
     v_to_delete = []
@@ -72,7 +72,7 @@ def main(argv=None):
     print "Getting the model..."
     # I might understand something wrong here, but shouldn't be 30 id, instead of 800?
     # Or is the it is a cross product between tissue and patient?
-    my_model = models.get_model(opt, dataset.dataset.nb_gene, dataset.dataset.nb_patient)
+    my_model = models.get_model(opt, dataset.dataset.input_size())
     print "Our model:"
     print my_model
 
@@ -80,7 +80,7 @@ def main(argv=None):
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.RMSprop(my_model.parameters(), lr=opt.lr, weight_decay=opt.weight_decay) # TODO use ADAM or something. weight decay.
 
-    if opt.cuda:
+    if not opt.cpu:
         print "Putting the model on gpu..."
         my_model.cuda()
 
@@ -107,7 +107,7 @@ def main(argv=None):
             inputs = Variable(inputs, requires_grad=False).float()
             targets = Variable(targets, requires_grad=False).float()
 
-            if opt.cuda:
+            if not opt.cpu:
                 inputs = inputs.cuda()
                 targets = targets.cuda()
 
@@ -121,7 +121,7 @@ def main(argv=None):
                 print "Doing epoch {}, examples {}/{}. Loss: {}".format(t, no_b, len(dataset), loss.data[0])
 
                 # Saving the emb
-                monitoring.save_everything(exp_dir, t, my_model, dataset.dataset)
+                #monitoring.save_everything(exp_dir, t, my_model, dataset.dataset)
 
 
             # Zero gradients, perform a backward pass, and update the weights.

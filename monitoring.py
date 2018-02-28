@@ -9,7 +9,7 @@ def save_everything(dir_name, epoch, model, dataset):
 
     file_name = os.path.join(dir_name, 'epoch_{}'.format(epoch))
 
-    emb = model.tissue_embedding.weight.cpu().data.numpy()
+    emb = model.emb_2.weight.cpu().data.numpy()
     dump_emb_size2(emb, file_name, dataset.data_type, dataset.data_subtype, dataset.nb_patient)
 
 

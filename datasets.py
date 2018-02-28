@@ -1,6 +1,9 @@
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import os
+import h5py
+import pdb
+
 
 class GeneDataset(Dataset):
     """Gene expression dataset"""
@@ -55,16 +58,96 @@ class GeneDataset(Dataset):
             Y_data = np.log10(Y_data + 1)
         return X_data, Y_data
 
+    def input_size(self):
+        return self.nb_gene, self.nb_patient
+
+class KmerDataset(Dataset):
+
+    def __init__(self, root_dir='/data/milatmp1/dutilfra/dataset/kmer/', data_path='duodenum1.24.hdf5', transform=None):
+
+
+        data_path = os.path.join(root_dir, data_path)
+
+        # Load the dataset
+        self.data = h5py.File(data_path)['kmer']
+        #self.data = np.array(self.data)
+
+        self.nb_kmer = self.data.shape[0]
+        self.nb_tissue = 1 # TODO
+        self.nb_patient = 1 # TODO
+
+        print "Processing the data..."
+        #self.X_data, self.Y_data = self.process_data(self.data)
+
+        self.root_dir = root_dir
+        self.transform = transform # heh
+
+    def __len__(self):
+        return len(self.data)
+
+    def process_data(self, data):
+
+        kmers = data[:, 0]
+        counts = data[:, 1]
+
+        # Turn the kmer in vocab of [0, 1, 2, 3] (A, C, G, T)
+        # We should probably do that in the other file. And more properly.
+        kmers_int = []
+        for kmer in kmers:
+            kmer = kmer.replace('A', '0').replace('C', '1').replace('G', '2').replace('T', '3')
+            kmer = np.array(list(kmer), dtype=int).reshape((-1, 1))
+
+            # Adding the patient id (TODO: For now there is only one patient)
+            kmer = [kmer, 0]
+
+            kmers_int.append(kmer)
+
+        #kmers_int = np.array(kmers_int)
+        # Take the log of the counts, (to check)
+        counts = np.log(counts.astype(int) + 1)
+
+        return kmers_int, counts
+
+    def __getitem__(self, idx):
+        #pdb.set_trace()
+
+        sample = self.data[idx, 0]
+        label = self.data[idx, 1].astype(int)
+
+
+        sample = [list(x.replace('A', '0').replace('C', '1').replace('G', '2').replace('T', '3')) for x in sample]
+        sample = np.array(sample).astype(int)
+
+        sample = np.pad(sample, ((0, 1), (0,0)), 'constant', constant_values=(0,))# adding the patient TODO: the real one.
+
+
+        sample = [sample, label]
+
+        if self.transform:
+            sample = self.transform(sample)
+
+
+        return sample
+
+    def input_size(self):
+
+        # 4 for [A, C, G, T]
+        # We have only one patient right now. (TODO: add more patient)
+
+        return 4, 1
+
 def get_dataset(opt):
 
     # All of the different datasets.
 
     if opt.dataset == 'gene':
         dataset = GeneDataset(root_dir=opt.data_dir)
+    elif opt.dataset == 'kmer':
+        dataset = KmerDataset()
     else:
         raise NotImplementedError()
 
     #TODO: check the num_worker, might be important later on, for when we will use a bunch of big files.
     dataloader = DataLoader(dataset, batch_size=opt.batch_size,
-                            shuffle=True, num_workers=4)
+                            shuffle=True, num_workers=1)
     return dataloader
