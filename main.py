@@ -1,4 +1,6 @@
+#!/usr/bin/env python
 import torch
+import pdb
 import numpy as np
 from torch.autograd import Variable
 import os
@@ -8,7 +10,7 @@ import models
 import pickle
 import time
 import monitoring
-
+#
 def build_parser():
     parser = argparse.ArgumentParser(
         description="Model for convolution-graph network (CGN)")
@@ -16,7 +18,7 @@ def build_parser():
     parser.add_argument('--epoch', default=10, type=int, help='The number of epochs we want ot train the network.')
     parser.add_argument('--seed', default=1993, type=int, help='Seed for random initialization and stuff.')
     parser.add_argument('--batch-size', default=100, type=int, help="The batch size.")
-    parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
+    parser.add_argument('--lr', default=1e-4, type=float, help='learning rate')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--data-dir', default='./data/', help='The folder contening the dataset.')
     parser.add_argument('--save-dir', default='./testing123/', help='The folder where everything will be saved.')
@@ -26,7 +28,7 @@ def build_parser():
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
 
     # Model specific options
-    parser.add_argument('--layers-size', default=[150, 100, 75, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
+    parser.add_argument('--layers-size', default=[250, 150, 100, 100, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
     parser.add_argument('--emb_size', default=2, type=int, help='The size of the embeddings.')
     parser.add_argument('--weight-decay', default=0., type=float, help='The size of the embeddings.')
     return parser
@@ -59,8 +61,13 @@ def main(argv=None):
             v_to_delete.append(v)
     for v in v_to_delete:
         del param[v]
-    exp_name = '_'.join(['{}={}'.format(k, v) for k, v, in param.iteritems()])
-    exp_dir = os.path.join(opt.save_dir, exp_name)
+    params = '_'.join(['{}={}'.format(k, v) for k, v, in param.iteritems()])
+    exp_dir = opt.save_dir+'/'
+    if not os.path.exists(exp_dir):
+        os.makedirs(exp_dir)
+    f = open(''.join([exp_dir,'run_parameters']),'wb')
+    f.write(params+'\n')
+    f.close()
     print vars(opt)
     print "Saving the everything in {}".format(exp_dir)
 
@@ -96,12 +103,21 @@ def main(argv=None):
     #     print "Nothing will be log, everything will only be shown on screen."
 
     # The training.
+    progress_bar_modulo = len(dataset)/10
+    
     for t in range(opt.epoch):
 
         start_timer = time.time()
+        
+        outfname_g = '_'.join(['gene_epoch',str(t),'prediction.npy'])
+        outfname_g = ''.join([exp_dir,outfname_g])
+        outfname_t = '_'.join(['tissue_epoch',str(t),'prediction.npy'])
+        outfname_t = ''.join([exp_dir,outfname_t])
+        train_trace = np.zeros((dataset.dataset.nb_gene, dataset.dataset.nb_patient))
 
         for no_b, mini in enumerate(dataset):
-
+            if no_b%progress_bar_modulo==0:
+                print '#'+str(no_b%progress_bar_modulo),
             inputs, targets = mini[0], mini[1]
 
             inputs = Variable(inputs, requires_grad=False).float()
@@ -114,7 +130,12 @@ def main(argv=None):
             # Forward pass: Compute predicted y by passing x to the model
             y_pred = my_model(inputs).float()
 
+            # Log the predicted values per sample and per gene (S.L. validation)
+            batch_inputs = mini[0].numpy()
+            predicted_values = y_pred.data.cpu().numpy()
+            train_trace[batch_inputs[:,0],batch_inputs[:,1]] = predicted_values[:,0]
             # Compute and print loss
+            
             loss = criterion(y_pred, targets)
             # TODO: the logging here.
             if ((no_b*opt.batch_size) % 10000000) == 0:
@@ -128,6 +149,12 @@ def main(argv=None):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+
+        monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
+        monitoring.dump_error_by_gene(train_trace, dataset.dataset.data, outfname_g, exp_dir)
+        
+        
 
 
     print "Done!"
