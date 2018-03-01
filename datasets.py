@@ -149,5 +149,5 @@ def get_dataset(opt):
 
     #TODO: check the num_worker, might be important later on, for when we will use a bunch of big files.
     dataloader = DataLoader(dataset, batch_size=opt.batch_size,
-                            shuffle=True, num_workers=1)
+                            shuffle=True, num_workers=4)
     return dataloader

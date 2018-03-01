@@ -17,8 +17,8 @@ def build_parser():
 
     parser.add_argument('--epoch', default=10, type=int, help='The number of epochs we want ot train the network.')
     parser.add_argument('--seed', default=1993, type=int, help='Seed for random initialization and stuff.')
-    parser.add_argument('--batch-size', default=100, type=int, help="The batch size.")
-    parser.add_argument('--lr', default=1e-4, type=float, help='learning rate')
+    parser.add_argument('--batch-size', default=10000, type=int, help="The batch size.")
+    parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--data-dir', default='./data/', help='The folder contening the dataset.')
     parser.add_argument('--save-dir', default='./testing123/', help='The folder where everything will be saved.')
@@ -28,9 +28,13 @@ def build_parser():
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
 
     # Model specific options
-    parser.add_argument('--layers-size', default=[250, 150, 100, 100, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
+    parser.add_argument('--layers-size', default=[150, 100, 100, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
     parser.add_argument('--emb_size', default=2, type=int, help='The size of the embeddings.')
-    parser.add_argument('--weight-decay', default=0., type=float, help='The size of the embeddings.')
+    parser.add_argument('--weight-decay', default=1e-5, type=float, help='The size of the embeddings.')
+
+    # Monitoring options
+    parser.add_argument('--save-error', action='store_true', help='If we want to save the error for each tissue and each gene at every epoch.')
+
     return parser
 
 def parse_args(argv):
@@ -47,29 +51,7 @@ def main(argv=None):
     opt = parse_args(argv)
     # TODO: set the seed
 
-    # The experiment unique id. TODO: to move in monitoring.py
-    param = vars(opt).copy()
-    # Removing a bunch of useless tag
-    del param['data_dir']
-    del param['save_dir']
-    del param['cpu']
-    del param['epoch']
-    del param['batch_size']
-    v_to_delete = []
-    for v in param:
-        if param[v] is None:
-            v_to_delete.append(v)
-    for v in v_to_delete:
-        del param[v]
-    params = '_'.join(['{}={}'.format(k, v) for k, v, in param.iteritems()])
-    exp_dir = opt.save_dir+'/'
-    if not os.path.exists(exp_dir):
-        os.makedirs(exp_dir)
-    f = open(''.join([exp_dir,'run_parameters']),'wb')
-    f.write(params+'\n')
-    f.close()
-    print vars(opt)
-    print "Saving the everything in {}".format(exp_dir)
+    exp_dir = monitoring.create_experiment_folder(opt)
 
     # creating the dataset
     print "Getting the dataset..."
@@ -91,18 +73,9 @@ def main(argv=None):
         print "Putting the model on gpu..."
         my_model.cuda()
 
-    # For the loggind and stuff. TODO: do.
-    # exp_dir = None
-    # if not os.path.exists(exp_dir):
-    #     os.mkdir(exp_dir)
-    #
-    #     # dumping the options
-    #     pickle.dump(opt, open(os.path.join(exp_dir, 'options.pkl'), 'wb'))
-    #     print "We will log everything in ", exp_dir
-    # else:
-    #     print "Nothing will be log, everything will only be shown on screen."
-
     # The training.
+
+    print "Start training."
     progress_bar_modulo = len(dataset)/10
     
     for t in range(opt.epoch):
@@ -110,9 +83,9 @@ def main(argv=None):
         start_timer = time.time()
         
         outfname_g = '_'.join(['gene_epoch',str(t),'prediction.npy'])
-        outfname_g = ''.join([exp_dir,outfname_g])
+        outfname_g = os.path.join(exp_dir,outfname_g)
         outfname_t = '_'.join(['tissue_epoch',str(t),'prediction.npy'])
-        outfname_t = ''.join([exp_dir,outfname_t])
+        outfname_t = os.path.join(exp_dir,outfname_t)
         train_trace = np.zeros((dataset.dataset.nb_gene, dataset.dataset.nb_patient))
 
         for no_b, mini in enumerate(dataset):
@@ -142,7 +115,7 @@ def main(argv=None):
                 print "Doing epoch {}, examples {}/{}. Loss: {}".format(t, no_b, len(dataset), loss.data[0])
 
                 # Saving the emb
-                #monitoring.save_everything(exp_dir, t, my_model, dataset.dataset)
+                monitoring.save_everything(exp_dir, t, my_model, dataset.dataset)
 
 
             # Zero gradients, perform a backward pass, and update the weights.
@@ -150,11 +123,9 @@ def main(argv=None):
             loss.backward()
             optimizer.step()
 
-
-        monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
-        monitoring.dump_error_by_gene(train_trace, dataset.dataset.data, outfname_g, exp_dir)
-        
-        
+        if opt.save_error:
+            monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
+            monitoring.dump_error_by_gene(train_trace, dataset.dataset.data, outfname_g, exp_dir)
 
 
     print "Done!"

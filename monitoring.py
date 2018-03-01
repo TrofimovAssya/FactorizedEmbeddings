@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import random
 
 def save_everything(dir_name, epoch, model, dataset):
 
@@ -34,6 +35,10 @@ def dump_error_by_gene(pred, data, file_name, dir_name):
     np.save(file_name,meanval)
 
 def dump_error_by_tissue(pred, data, file_name, dir_name, data_type, nb_patient):
+
+
+    #import ipdb; ipdb.set_trace()
+
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
     assert pred.shape == data.shape
@@ -45,6 +50,25 @@ def dump_error_by_tissue(pred, data, file_name, dir_name, data_type, nb_patient)
     b.close()    
 
     
+def create_experiment_folder(opt):
+
+    params = vars(opt).copy()
+    params = str(params)
+
+    # create a experiment folder
+    this_hash = random.getrandbits(128)
+    this_hash = "%032x" % this_hash # in hex
+
+    exp_dir = os.path.join(opt.save_dir, this_hash)
+
+    if not os.path.exists(exp_dir):
+        os.makedirs(exp_dir)
+    f = open(os.path.join(exp_dir,'run_parameters'), 'wb')
+    f.write(params+'\n')
+    f.close()
+    print vars(opt)
+    print "Saving the everything in {}".format(exp_dir)
+    return exp_dir
 
 #
 # def sample_embedding_dump(emb, epoch, g_emb_size, data_type, data_subtype, pca=False, nmf=False):
