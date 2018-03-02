@@ -1,6 +1,9 @@
 import os
 import numpy as np
 import random
+import torch
+import shutil
+import models
 
 def save_everything(dir_name, epoch, model, dataset):
 
@@ -69,6 +72,72 @@ def create_experiment_folder(opt):
     print vars(opt)
     print "Saving the everything in {}".format(exp_dir)
     return exp_dir
+
+
+def save_checkpoint(model, optimizer, epoch, opt, exp_dir, filename='checkpoint.pth.tar'):
+
+    state = {
+            'epoch': epoch + 1,
+            'state_dict': model.state_dict(),
+            'optimizer' : optimizer.state_dict(),
+            'opt' : opt
+        }
+
+    filename = os.path.join(exp_dir, filename)
+    torch.save(state, filename)
+
+def load_checkpoint(load_folder, opt, input_size, filename='checkpoint.pth.tar'):
+
+    # Model
+    model_state = None
+
+    # Epoch
+    epoch = 0
+
+    # Optimizser
+    optimizer_state = None
+
+    # Options
+    new_opt = opt
+
+    # Load the states if we saved them.
+    if opt.load_folder:
+
+        # Loading all the state
+        filename = os.path.join(load_folder, filename)
+        if os.path.isfile(filename):
+            print "=> loading checkpoint '{}'".format(filename)
+            checkpoint = torch.load(filename)
+            start_epoch = checkpoint['epoch']
+
+            # Loading the options
+            new_opt = checkpoint['opt']
+            print "Loading the model with these parameters: {}".format(new_opt)
+
+            # Loading the state
+            model_state = checkpoint['state_dict']
+            optimizer_state = checkpoint['optimizer']
+            epoch = checkpoint['epoch']
+
+            # We override some of the options between the runs, otherwise it might be a pain.
+            new_opt.epoch = opt.epoch
+
+            print"=> loaded checkpoint '{}' (epoch {})".format(filename, epoch)
+        else:
+            print("=> no checkpoint found at '{}'".format(filename))
+
+    # Get the network
+    my_model = models.get_model(new_opt, input_size, model_state)
+
+    # Get the optimizer
+    optimizer = torch.optim.RMSprop(my_model.parameters(), lr=new_opt.lr, weight_decay=new_opt.weight_decay)
+    if optimizer_state is not None:
+        optimizer.load_state_dict(optimizer_state)
+
+    print "Our model:"
+    print my_model
+
+    return my_model, optimizer, epoch, new_opt
 
 #
 # def sample_embedding_dump(emb, epoch, g_emb_size, data_type, data_subtype, pca=False, nmf=False):

@@ -24,6 +24,9 @@ class GeneDataset(Dataset):
 
         # TODO: for proper pytorch form, we should probably do that on the fly, but heh. todo future me.
         self.X_data, self.Y_data = self.dataset_make(self.data, log_transform=True)
+        self.X_data = self.X_data[:1000]
+        self.Y_data = self.Y_data[:1000]
+
         #import ipdb; ipdb.set_trace()
 
         self.root_dir = root_dir
@@ -72,6 +75,7 @@ class KmerDataset(Dataset):
         self.data = h5py.File(data_path)['kmer']
         #self.data = np.array(self.data)
 
+
         self.nb_kmer = self.data.shape[0]
         self.nb_tissue = 1 # TODO
         self.nb_patient = 1 # TODO
@@ -111,9 +115,15 @@ class KmerDataset(Dataset):
     def __getitem__(self, idx):
         #pdb.set_trace()
 
-        sample = self.data[idx, 0]
-        label = self.data[idx, 1].astype(int)
-
+        try:
+            sample = self.data[idx, 0] # copy
+            label = self.data[idx, 1].astype(int) # copy
+        except Exception as e:
+            print "Oh no!", e
+            print sample
+            print "{}, {}, {}, {}".format(idx, self.data.shape, self.data[idx, 1], self.data[idx, 0])
+            raise e
+        #print sample, label
 
         sample = [list(x.replace('A', '0').replace('C', '1').replace('G', '2').replace('T', '3')) for x in sample]
         sample = np.array(sample).astype(int)
@@ -146,8 +156,20 @@ def get_dataset(opt):
         dataset = KmerDataset()
     else:
         raise NotImplementedError()
+    #import ipdb;
+    #ipdb.set_trace()
 
     #TODO: check the num_worker, might be important later on, for when we will use a bunch of big files.
     dataloader = DataLoader(dataset, batch_size=opt.batch_size,
-                            shuffle=True, num_workers=4)
+                            shuffle=True, num_workers=0)
+
+    #print "print some stuff"
+    #for i, e in enumerate(dataloader):
+    #    print i, e
+    #
+    #    if i > 10:
+    #        break
+
+
+
     return dataloader

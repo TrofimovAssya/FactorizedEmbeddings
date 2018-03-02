@@ -73,12 +73,12 @@ class BagFactorizedMLP(FactorizedMLP):
         patient = self.emb_2(patient.long())
 
         # Sum the embeddings (TODO: try fancy RNN and stuff)
-        kmer = kmer.sum(dim=1)
-        patient = patient.sum(dim=1)
+        kmer = kmer.mean(dim=1)
+        patient = patient.mean(dim=1)
 
         return kmer, patient
 
-def get_model(opt, inputs_size):
+def get_model(opt, inputs_size, model_state=None):
 
     # All of the different models.
 
@@ -92,5 +92,9 @@ def get_model(opt, inputs_size):
 
 
     model = model_class(layers_size=opt.layers_size, emb_size=opt.emb_size, inputs_size=inputs_size)
+
+    # If we load stuff
+    if model_state is not None:
+        model.load_state_dict(model_state)
 
     return model

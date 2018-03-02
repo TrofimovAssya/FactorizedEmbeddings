@@ -34,6 +34,7 @@ def build_parser():
 
     # Monitoring options
     parser.add_argument('--save-error', action='store_true', help='If we want to save the error for each tissue and each gene at every epoch.')
+    parser.add_argument('--load-folder', help='The folder where to load and restart the training.')
 
     return parser
 
@@ -50,8 +51,14 @@ def main(argv=None):
 
     opt = parse_args(argv)
     # TODO: set the seed
+    seed = opt.seed
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.manual_seed(seed)
 
-    exp_dir = monitoring.create_experiment_folder(opt)
+    exp_dir = opt.load_folder
+    if exp_dir is None: # we create a new folder if we don't load.
+        exp_dir = monitoring.create_experiment_folder(opt)
 
     # creating the dataset
     print "Getting the dataset..."
@@ -59,34 +66,29 @@ def main(argv=None):
 
     # Creating a model
     print "Getting the model..."
-    # I might understand something wrong here, but shouldn't be 30 id, instead of 800?
-    # Or is the it is a cross product between tissue and patient?
-    my_model = models.get_model(opt, dataset.dataset.input_size())
-    print "Our model:"
-    print my_model
+    my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir, opt, dataset.dataset.input_size())
 
     # Training optimizer and stuff
     criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.RMSprop(my_model.parameters(), lr=opt.lr, weight_decay=opt.weight_decay) # TODO use ADAM or something. weight decay.
 
     if not opt.cpu:
         print "Putting the model on gpu..."
         my_model.cuda()
 
     # The training.
-
     print "Start training."
     progress_bar_modulo = len(dataset)/10
     
-    for t in range(opt.epoch):
+    for t in range(epoch, opt.epoch):
 
         start_timer = time.time()
-        
-        outfname_g = '_'.join(['gene_epoch',str(t),'prediction.npy'])
-        outfname_g = os.path.join(exp_dir,outfname_g)
-        outfname_t = '_'.join(['tissue_epoch',str(t),'prediction.npy'])
-        outfname_t = os.path.join(exp_dir,outfname_t)
-        train_trace = np.zeros((dataset.dataset.nb_gene, dataset.dataset.nb_patient))
+
+        if opt.save_error:
+            outfname_g = '_'.join(['gene_epoch',str(t),'prediction.npy'])
+            outfname_g = os.path.join(exp_dir,outfname_g)
+            outfname_t = '_'.join(['tissue_epoch',str(t),'prediction.npy'])
+            outfname_t = os.path.join(exp_dir,outfname_t)
+            train_trace = np.zeros((dataset.dataset.nb_gene, dataset.dataset.nb_patient))
 
         for no_b, mini in enumerate(dataset):
             if no_b%progress_bar_modulo==0:
@@ -103,12 +105,13 @@ def main(argv=None):
             # Forward pass: Compute predicted y by passing x to the model
             y_pred = my_model(inputs).float()
 
-            # Log the predicted values per sample and per gene (S.L. validation)
-            batch_inputs = mini[0].numpy()
-            predicted_values = y_pred.data.cpu().numpy()
-            train_trace[batch_inputs[:,0],batch_inputs[:,1]] = predicted_values[:,0]
+            if opt.save_error:
+                # Log the predicted values per sample and per gene (S.L. validation)
+                batch_inputs = mini[0].numpy()
+                predicted_values = y_pred.data.cpu().numpy()
+                train_trace[batch_inputs[:,0],batch_inputs[:,1]] = predicted_values[:,0]
+
             # Compute and print loss
-            
             loss = criterion(y_pred, targets)
             # TODO: the logging here.
             if ((no_b*opt.batch_size) % 10000000) == 0:
@@ -126,6 +129,10 @@ def main(argv=None):
         if opt.save_error:
             monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
             monitoring.dump_error_by_gene(train_trace, dataset.dataset.data, outfname_g, exp_dir)
+
+
+        print "Saving the model..."
+        monitoring.save_checkpoint(my_model, optimizer, t, opt, exp_dir)
 
 
     print "Done!"
