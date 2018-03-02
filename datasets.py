@@ -24,8 +24,8 @@ class GeneDataset(Dataset):
 
         # TODO: for proper pytorch form, we should probably do that on the fly, but heh. todo future me.
         self.X_data, self.Y_data = self.dataset_make(self.data, log_transform=True)
-        self.X_data = self.X_data[:1000]
-        self.Y_data = self.Y_data[:1000]
+        #self.X_data = self.X_data[:1000]
+        #self.Y_data = self.Y_data[:1000]
 
         #import ipdb; ipdb.set_trace()
 

@@ -4,6 +4,7 @@ import random
 import torch
 import shutil
 import models
+import datetime
 
 def save_everything(dir_name, epoch, model, dataset):
 
@@ -71,6 +72,10 @@ def create_experiment_folder(opt):
     f.close()
     print vars(opt)
     print "Saving the everything in {}".format(exp_dir)
+
+    with open(os.path.join(opt.save_dir, 'experiment_table.txt'), 'a') as f:
+        f.write('time: {} folder: {} experiment: {}\n'.format(datetime.datetime.now(), this_hash, params))
+
     return exp_dir
 
 
