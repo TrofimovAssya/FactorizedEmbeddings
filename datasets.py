@@ -3,7 +3,8 @@ import numpy as np
 import os
 import h5py
 import pdb
-
+from collections import OrderedDict
+import shutil
 
 class GeneDataset(Dataset):
     """Gene expression dataset"""
@@ -64,12 +65,28 @@ class GeneDataset(Dataset):
     def input_size(self):
         return self.nb_gene, self.nb_patient
 
+    def extra_info(self):
+        # get some extra info to dumb with the embeddings.
+        info = OrderedDict()
+        info['type'] = self.data_type
+        info['subtype'] = self.data_subtype
+        return info
+
 class KmerDataset(Dataset):
 
-    def __init__(self, root_dir='/data/milatmp1/dutilfra/dataset/kmer/', data_path='duodenum1.24.hdf5', transform=None):
+    def __init__(self, root_dir='/data/milatmp1/dutilfra/dataset/kmer/', data_path='duodenum1.24.hdf5', tmp_folder='/Tmp/dutilfra/dataset/kmer/' , transform=None):
 
 
+        tmp_path = os.path.join(tmp_folder, data_path)
         data_path = os.path.join(root_dir, data_path)
+
+        if not os.path.exists(tmp_folder):
+            print "Copying the data in {}...".format(tmp_path)
+            os.makedirs(tmp_folder)
+            shutil.copyfile(data_path, tmp_path)
+            print "Done!"
+            data_path = tmp_path
+
 
         # Load the dataset
         self.data = h5py.File(data_path)['kmer']
@@ -79,9 +96,6 @@ class KmerDataset(Dataset):
         self.nb_kmer = self.data.shape[0]
         self.nb_tissue = 1 # TODO
         self.nb_patient = 1 # TODO
-
-        print "Processing the data..."
-        #self.X_data, self.Y_data = self.process_data(self.data)
 
         self.root_dir = root_dir
         self.transform = transform # heh
@@ -115,20 +129,18 @@ class KmerDataset(Dataset):
     def __getitem__(self, idx):
         #pdb.set_trace()
 
-        try:
-            sample = self.data[idx, 0] # copy
-            label = self.data[idx, 1].astype(int) # copy
-        except Exception as e:
-            print "Oh no!", e
-            print sample
-            print "{}, {}, {}, {}".format(idx, self.data.shape, self.data[idx, 1], self.data[idx, 0])
-            raise e
+        #import ipdb; ipdb.set_trace()
+
+        sample = self.data[idx, :-1]
+        label = self.data[idx, -1]
+        label = np.log(label)
         #print sample, label
 
-        sample = [list(x.replace('A', '0').replace('C', '1').replace('G', '2').replace('T', '3')) for x in sample]
-        sample = np.array(sample).astype(int)
+        #sample = [list(x.replace('A', '0').replace('C', '1').replace('G', '2').replace('T', '3')) for x in sample]
+        #sample = np.array(sample).astype(int)
+        #import ipdb; ipdb.set_trace()
 
-        sample = np.pad(sample, ((0, 1), (0,0)), 'constant', constant_values=(0,))# adding the patient TODO: the real one.
+        sample = np.pad(sample, ((0, 1),), 'constant', constant_values=(0,))# adding the patient TODO: the real one.
 
 
         sample = [sample, label]
@@ -146,6 +158,11 @@ class KmerDataset(Dataset):
 
         return 4, 1
 
+    def extra_info(self):
+        # get some extra info to dumb with the embeddings.
+        info = OrderedDict()
+        return info
+
 def get_dataset(opt):
 
     # All of the different datasets.
@@ -161,15 +178,6 @@ def get_dataset(opt):
 
     #TODO: check the num_worker, might be important later on, for when we will use a bunch of big files.
     dataloader = DataLoader(dataset, batch_size=opt.batch_size,
-                            shuffle=True, num_workers=0)
-
-    #print "print some stuff"
-    #for i, e in enumerate(dataloader):
-    #    print i, e
-    #
-    #    if i > 10:
-    #        break
-
-
+                            shuffle=True, num_workers=1)
 
     return dataloader

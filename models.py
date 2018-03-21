@@ -43,7 +43,6 @@ class FactorizedMLP(nn.Module):
 
     def forward(self, x):
 
-
         # Get the embeddings
         emb_1, emb_2 = self.get_embeddings(x)
 
@@ -74,8 +73,6 @@ class BagFactorizedMLP(FactorizedMLP):
 
         # Sum the embeddings (TODO: try fancy RNN and stuff)
         kmer = kmer.mean(dim=1)
-        patient = patient.mean(dim=1)
-
         return kmer, patient
 
 def get_model(opt, inputs_size, model_state=None):

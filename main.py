@@ -77,7 +77,7 @@ def main(argv=None):
 
     # The training.
     print "Start training."
-    progress_bar_modulo = len(dataset)/10
+    progress_bar_modulo = len(dataset)/100
     
     for t in range(epoch, opt.epoch):
 
@@ -91,8 +91,7 @@ def main(argv=None):
             train_trace = np.zeros((dataset.dataset.nb_gene, dataset.dataset.nb_patient))
 
         for no_b, mini in enumerate(dataset):
-            if no_b%progress_bar_modulo==0:
-                print '#'+str(no_b%progress_bar_modulo),
+
             inputs, targets = mini[0], mini[1]
 
             inputs = Variable(inputs, requires_grad=False).float()
@@ -114,7 +113,7 @@ def main(argv=None):
             # Compute and print loss
             loss = criterion(y_pred, targets)
             # TODO: the logging here.
-            if ((no_b*opt.batch_size) % 10000000) == 0:
+            if no_b % progress_bar_modulo == 0:
                 print "Doing epoch {}, examples {}/{}. Loss: {}".format(t, no_b, len(dataset), loss.data[0])
 
                 # Saving the emb

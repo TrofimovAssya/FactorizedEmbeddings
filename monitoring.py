@@ -16,18 +16,19 @@ def save_everything(dir_name, epoch, model, dataset):
     file_name = os.path.join(dir_name, 'epoch_{}'.format(epoch))
 
     emb = model.emb_2.weight.cpu().data.numpy()
-    dump_emb_size2(emb, file_name, dataset.data_type, dataset.data_subtype, dataset.nb_patient)
+    dump_emb_size2(emb, file_name, dataset.extra_info(), dataset.nb_patient)
 
 
-def dump_emb_size2(emb, file_name, data_type, data_subtype, nb_patient):
+def dump_emb_size2(emb, file_name, extra_info, nb_patient):
 
     assert emb.shape[1] == 2
 
     b = open(file_name, 'wb')
 
-    b.write("\t".join(['dimension1', 'dimension2', 'type', 'subtype']) + '\n')
+    info_keys, info_values = extra_info.keys(), extra_info.values()
+    b.write("\t".join(['dimension1', 'dimension2'] + info_keys) + '\n')
     for p in xrange(nb_patient):
-        b.write("\t".join([str(emb[p, 0]), str(emb[p, 1]), str(data_type[p]), str(data_subtype[p])]) + '\n')
+        b.write("\t".join([str(emb[p, 0]), str(emb[p, 1])] + [str(info[p]) for info in info_values]) + '\n')
     b.close()
 
 def dump_error_by_gene(pred, data, file_name, dir_name):
