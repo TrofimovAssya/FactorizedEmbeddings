@@ -58,6 +58,34 @@ class FactorizedMLP(nn.Module):
 
         return mlp_output
 
+    def generate_datapoint(self, e):
+
+        # Function that generates a datapoint from a given coordinate in datapoint space
+        # datapoint = tissues, attributes = genes (generally)
+
+        #get embeddings for all attributes
+        emb_1 = self.emb_1.weight.cpu().data.numpy()
+        # copy the coordinates for reconstruction
+        emb_2 = (np.ones(emb_1.shape[0]*2)).reshape((emb_1.shape[0],2))*e
+
+        ## Torch tensor stuff
+        emb_1 = Variable(torch.FloatTensor(emb_1), requires_grad = False).float()
+        emb_2 = Variable(torch.FloatTensor(emb_2), requires_grad = False).float()
+
+        #Forward pass to reconstruct
+        mlp_input = torch.cat([emb_1, emb_2],1)
+        # Forward pass.
+        mlp_input = torch.cat([emb_1, emb_2], 1)
+
+                     
+        for layer in self.mlp_layers:
+            mlp_input = layer(mlp_input)
+            mlp_input = F.tanh(mlp_input)
+
+        mlp_output = self.last_layer(mlp_input)
+
+        return mlp_output
+    
 class BagFactorizedMLP(FactorizedMLP):
 
     '''
