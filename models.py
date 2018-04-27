@@ -74,8 +74,6 @@ class FactorizedMLP(nn.Module):
 
         #Forward pass to reconstruct
         mlp_input = torch.cat([emb_1, emb_2],1)
-        # Forward pass.
-        mlp_input = torch.cat([emb_1, emb_2], 1)
 
                      
         for layer in self.mlp_layers:
@@ -83,7 +81,7 @@ class FactorizedMLP(nn.Module):
             mlp_input = F.tanh(mlp_input)
 
         mlp_output = self.last_layer(mlp_input)
-
+        #returning generated image
         return mlp_output
     
 class BagFactorizedMLP(FactorizedMLP):
