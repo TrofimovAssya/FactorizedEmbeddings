@@ -13,23 +13,37 @@ def save_everything(dir_name, epoch, model, dataset):
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
 
-    file_name = os.path.join(dir_name, 'epoch_{}'.format(epoch))
+    file_name = os.path.join(dir_name, 'gene_epoch_{}'.format(epoch))
+
+    emb = model.emb_1.weight.cpu().data.numpy()
+    np.save(file_name,emb)
 
     emb = model.emb_2.weight.cpu().data.numpy()
-    dump_emb_size2(emb, file_name, dataset.extra_info(), dataset.nb_patient)
+    np.save(file_name,emb)
+    file_name = os.path.join(dir_name, 'patient_epoch_{}'.format(epoch))
+    np.save(file_name, emb)
+    #dump_emb_size2(emb, file_name, dataset.extra_info(), dataset.nb_patient)
+
+
+def save_predictions(dir_name, predictions):
+    file_name = os.path.join(dir_name, 'predictions')
+    np.save(file_name, predictions)
 
 
 def dump_emb_size2(emb, file_name, extra_info, nb_patient):
 
     assert emb.shape[1] == 2
 
-    b = open(file_name, 'wb')
+    #b = open(file_name, 'wb')
+    np.save(file_name,emb)
 
-    info_keys, info_values = extra_info.keys(), extra_info.values()
-    b.write("\t".join(['dimension1', 'dimension2'] + info_keys) + '\n')
-    for p in xrange(nb_patient):
-        b.write("\t".join([str(emb[p, 0]), str(emb[p, 1])] + [str(info[p]) for info in info_values]) + '\n')
-    b.close()
+    # info_keys, info_values = extra_info.keys(), extra_info.values()
+    # import pdb; pdb.set_trace()
+    # b.write("\t".join(['dimension1', 'dimension2'] + info_keys) + '\n')
+
+    # for p in xrange(nb_patient):
+    #     b.write("\t".join([str(emb[p, 0]), str(emb[p, 1])] + [str(info[p]) for info in info_values]) + '\n')
+    # b.close()
 
 def dump_error_by_gene(pred, data, file_name, dir_name):
     if not os.path.exists(dir_name):
@@ -68,11 +82,11 @@ def create_experiment_folder(opt):
 
     if not os.path.exists(exp_dir):
         os.makedirs(exp_dir)
-    f = open(os.path.join(exp_dir,'run_parameters'), 'wb')
+    f = open(os.path.join(exp_dir,'run_parameters'), 'w')
     f.write(params+'\n')
     f.close()
-    print vars(opt)
-    print "Saving the everything in {}".format(exp_dir)
+    print (vars(opt))
+    print (f"Saving the everything in {exp_dir}")
 
     with open(os.path.join(opt.save_dir, 'experiment_table.txt'), 'a') as f:
         f.write('time: {} folder: {} experiment: {}\n'.format(datetime.datetime.now(), this_hash, params))
@@ -112,13 +126,13 @@ def load_checkpoint(load_folder, opt, input_size, filename='checkpoint.pth.tar')
         # Loading all the state
         filename = os.path.join(load_folder, filename)
         if os.path.isfile(filename):
-            print "=> loading checkpoint '{}'".format(filename)
+            print (f"=> loading checkpoint '{filename}'")
             checkpoint = torch.load(filename)
             start_epoch = checkpoint['epoch']
 
             # Loading the options
             new_opt = checkpoint['opt']
-            print "Loading the model with these parameters: {}".format(new_opt)
+            print(f"Loading the model with these parameters: {new_opt}")
 
             # Loading the state
             model_state = checkpoint['state_dict']
@@ -128,9 +142,9 @@ def load_checkpoint(load_folder, opt, input_size, filename='checkpoint.pth.tar')
             # We override some of the options between the runs, otherwise it might be a pain.
             new_opt.epoch = opt.epoch
 
-            print"=> loaded checkpoint '{}' (epoch {})".format(filename, epoch)
+            print(f"=> loaded checkpoint '{filename}' (epoch {epoch})")
         else:
-            print("=> no checkpoint found at '{}'".format(filename))
+            print(f"=> no checkpoint found at '{filename}'")
 
     # Get the network
     my_model = models.get_model(new_opt, input_size, model_state)
@@ -140,8 +154,8 @@ def load_checkpoint(load_folder, opt, input_size, filename='checkpoint.pth.tar')
     if optimizer_state is not None:
         optimizer.load_state_dict(optimizer_state)
 
-    print "Our model:"
-    print my_model
+    print ("Our model:")
+    print (my_model)
 
     return my_model, optimizer, epoch, new_opt
 

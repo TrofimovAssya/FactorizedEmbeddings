@@ -13,10 +13,10 @@ import monitoring
 #
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Model for convolution-graph network (CGN)")
+        description="")
 
     parser.add_argument('--epoch', default=10, type=int, help='The number of epochs we want ot train the network.')
-    parser.add_argument('--seed', default=1993, type=int, help='Seed for random initialization and stuff.')
+    parser.add_argument('--seed', default=151911, type=int, help='Seed for random initialization and stuff.')
     parser.add_argument('--batch-size', default=10000, type=int, help="The batch size.")
     parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
@@ -26,14 +26,16 @@ def build_parser():
     parser.add_argument('--model', choices=['factor', 'bag'], default='factor', help='Which model to use.')
     parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
-
+    parser.add_argument('--gpu-selection', type=int, default=0, help="selectgpu")
     # Model specific options
-    parser.add_argument('--layers-size', default=[150, 100, 100, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
+    parser.add_argument('--layers-size', default=[500, 250, 100, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
     parser.add_argument('--emb_size', default=2, type=int, help='The size of the embeddings.')
     parser.add_argument('--weight-decay', default=1e-5, type=float, help='The size of the embeddings.')
 
     # Monitoring options
     parser.add_argument('--save-error', action='store_true', help='If we want to save the error for each tissue and each gene at every epoch.')
+    parser.add_argument('--make-grid', default=True, type=bool,  help='If we want to generate fake patients on a meshgrid accross the patient embedding space')
+    parser.add_argument('--nb-gridpoints', default=50, type=int, help='Number of points on each side of the meshgrid')
     parser.add_argument('--load-folder', help='The folder where to load and restart the training.')
 
     return parser
@@ -61,24 +63,29 @@ def main(argv=None):
         exp_dir = monitoring.create_experiment_folder(opt)
 
     # creating the dataset
-    print "Getting the dataset..."
-    dataset = datasets.get_dataset(opt)
+    print ("Getting the dataset...")
+    dataset = datasets.get_dataset(opt,exp_dir)
 
     # Creating a model
-    print "Getting the model..."
+    print ("Getting the model...")
     my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir, opt, dataset.dataset.input_size())
 
     # Training optimizer and stuff
     criterion = torch.nn.MSELoss()
 
     if not opt.cpu:
-        print "Putting the model on gpu..."
-        my_model.cuda()
+        print ("Putting the model on gpu...")
+        my_model.cuda(opt.gpu_selection)
 
     # The training.
-    print "Start training."
+    print ("Start training.")
+    #monitoring and predictions
+    predictions =np.zeros((dataset.dataset.nb_patient,dataset.dataset.nb_gene))
+    indices_patients = np.arange(dataset.dataset.nb_patient)
+    indices_genes = np.arange(dataset.dataset.nb_gene)
+    xdata = np.transpose([np.tile(indices_genes, len(indices_patients)),
+                          np.repeat(indices_patients, len(indices_genes))])
     progress_bar_modulo = len(dataset)/100
-    
     for t in range(epoch, opt.epoch):
 
         start_timer = time.time()
@@ -98,8 +105,8 @@ def main(argv=None):
             targets = Variable(targets, requires_grad=False).float()
 
             if not opt.cpu:
-                inputs = inputs.cuda()
-                targets = targets.cuda()
+                inputs = inputs.cuda(opt.gpu_selection)
+                targets = targets.cuda(opt.gpu_selection)
 
             # Forward pass: Compute predicted y by passing x to the model
             y_pred = my_model(inputs).float()
@@ -109,32 +116,92 @@ def main(argv=None):
                 batch_inputs = mini[0].numpy()
                 predicted_values = y_pred.data.cpu().numpy()
                 train_trace[batch_inputs[:,0],batch_inputs[:,1]] = predicted_values[:,0]
-
+            #import pdb; pdb.set_trace()
+            targets = torch.reshape(targets,(targets.shape[0],1))
             # Compute and print loss
+
+
+
+
+#            import pdb
+#            pdb.set_trace()
             loss = criterion(y_pred, targets)
             # TODO: the logging here.
-            if no_b % progress_bar_modulo == 0:
-                print "Doing epoch {}, examples {}/{}. Loss: {}".format(t, no_b, len(dataset), loss.data[0])
+            if no_b % 5 == 0:
+                #import pdb; pdb.set_trace()
+                print (f"Doing epoch {t},examples{no_b}/{len(dataset)}.Loss:{loss.data.cpu().numpy().reshape(1,)[0]}")
 
                 # Saving the emb
-                monitoring.save_everything(exp_dir, t, my_model, dataset.dataset)
+                np.save(os.path.join(exp_dir, 'pixel_epoch_{}'.format(t)),my_model.emb_1.weight.cpu().data.numpy() )
+                np.save(os.path.join(exp_dir,'digit_epoch_{}'.format(t)),my_model.emb_2.weight.cpu().data.numpy())
+                #monitoring.save_everything(exp_dir, t, my_model, dataset.dataset)
 
 
             # Zero gradients, perform a backward pass, and update the weights.
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            my_model.generate_datapoint([0,0], opt.gpu_selection)
+        monitoring.save_predictions(exp_dir, predictions)
+        #import pdb; pdb.set_trace()
 
-        if opt.save_error:
-            monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
-            monitoring.dump_error_by_gene(train_trace, dataset.dataset.data, outfname_g, exp_dir)
+
+        for i in range(0,xdata.shape[0],1000):
+            #import pdb; pdb.set_trace()
+            inputs = torch.FloatTensor(xdata[i:i+1000,:])
+            inputs = Variable(inputs, requires_grad=False).float()
+            if not opt.cpu:
+                inputs = inputs.cuda(opt.gpu_selection)
+            y_pred = my_model(inputs).float()
+            predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
+        #      monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
+        #      monitoring.dump_error_by_gene(train_trace, dataset.dataset.data, outfname_g, exp_dir)
 
 
-        print "Saving the model..."
+        print ("Saving the model...")
         monitoring.save_checkpoint(my_model, optimizer, t, opt, exp_dir)
 
 
-    print "Done!"
+        if opt.make_grid:
+            print ('generating grid and datapoints')
+
+            nb_points = opt.nb_gridpoints
+            x_min = min(my_model.emb_2.weight.data.cpu().numpy()[:,0])
+            y_min = min(my_model.emb_2.weight.data.cpu().numpy()[:,1])
+            x_max = max(my_model.emb_2.weight.data.cpu().numpy()[:,0])
+            y_max = max(my_model.emb_2.weight.data.cpu().numpy()[:,1])
+            x = np.linspace((np.floor(x_min*100))/100,(np.ceil(x_max*100))/100,nb_points)
+            y = np.linspace((np.floor(y_min*100))/100,(np.ceil(y_max*100))/100,nb_points)
+            X, Y = np.meshgrid(x,y)
+            T = []
+            print (f"I'll be making {(X.shape[0]*X.shape[1])**2} samples for a grid of {X.shape[0]} by {X.shape[1]} ")
+            count = 0
+
+            for ix,iy in zip(X.reshape((X.shape[0]*X.shape[1],)),Y.reshape((Y.shape[0]*Y.shape[1],))):
+                if count%1000==0:
+                    print(f'made {count} samples')
+                #import pdb; pdb.set_trace()
+                #np.save(os.path.join(exp_dir,'generated_patient{}'.format(count)),my_model.generate_datapoint([ix,iy],opt.gpu_selection).data.cpu().numpy())
+                T.append(my_model.generate_datapoint([ix,iy],opt.gpu_selection).data.cpu().numpy())
+                count+=1
+            np.save(os.path.join(exp_dir,'meshgrid_x.npy'),X)
+            np.save(os.path.join(exp_dir,'meshgrid_y.npy'),Y)
+            np.save(os.path.join(exp_dir,'generated_mesh_samples.npy'),T)
+
+
+
+    #getting a datapoint embedding coordinate                                                                                                                                 
+
+    #inputs = torch.FloatTensor(xdata[i:i+1000,:])
+    #inputs = Variable(inputs, requires_grad=False).float()
+    #if not opt.cpu:
+    #    inputs = inputs.cuda(opt.gpu_selection)
+    #    y_pred = my_model(inputs).float()
+    #predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
+    #emb_2 = (np.ones(emb_1.shape[0]*2).reshape((emb_1.shape[0],2)))*[0,0]
+
+
+
 
     #TODO: end of training, save the model and blah.
 

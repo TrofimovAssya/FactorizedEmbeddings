@@ -1,8 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
-import numpy as np
-from torch.autograd import Variable
+
 
 class FactorizedMLP(nn.Module):
 
@@ -12,7 +11,7 @@ class FactorizedMLP(nn.Module):
         self.layers_size = layers_size
         self.emb_size = emb_size
         self.inputs_size = inputs_size
-
+        
 
         # The embedding
         # TODO: At one point we will probably need to refactor that for it to be more general. Maybe.
@@ -40,6 +39,7 @@ class FactorizedMLP(nn.Module):
         gene = self.emb_1(gene.long())
         patient = self.emb_2(patient.long())
 
+
         return gene, patient
 
     def forward(self, x):
@@ -58,26 +58,38 @@ class FactorizedMLP(nn.Module):
         mlp_output = self.last_layer(mlp_input)
 
         return mlp_output
-    def generate_datapoint(self, e, gpu):
-        #getting a datapoint embedding coordinate
-        #import pdb; pdb.set_trace()
+
+    def generate_datapoint(self, e, attributes):
+
+        # Function that generates a datapoint from a given coordinate in datapoint space
+        # datapoint = tissues, attributes = genes (generally)
+
+        #get embeddings for all attributes
         emb_1 = self.emb_1.weight.cpu().data.numpy()
-        emb_2 = (np.ones(emb_1.shape[0]*2).reshape((emb_1.shape[0],2)))*e
-        emb_1 = torch.FloatTensor(emb_1)
-        emb_2 = torch.FloatTensor(emb_2)
-        emb_1 = Variable(emb_1, requires_grad=False).float()
-        emb_2 = Variable(emb_2, requires_grad=False).float()
-        #if gpu:
-        emb_1 = emb_1.cuda(gpu)
-        emb_2 = emb_2.cuda(gpu)
+
+
+        # copy the coordinates for reconstruction
+        emb_2 = (np.ones(emb_1.shape[0]*2)).reshape((emb_1.shape[0],2))*e
+
+
+        ## Torch tensor stuff
+        emb_1 = Variable(torch.FloatTensor(emb_1), requires_grad = False).float()
+        emb_2 = Variable(torch.FloatTensor(emb_2), requires_grad = False).float()
+
+
+        #Forward pass to reconstruct
         mlp_input = torch.cat([emb_1, emb_2],1)
+
+                     
         for layer in self.mlp_layers:
             mlp_input = layer(mlp_input)
             mlp_input = F.tanh(mlp_input)
-        mlp_output = self.last_layer(mlp_input)
-        return mlp_output
 
-class BagFaccorizedMLP(FactorizedMLP):
+        mlp_output = self.last_layer(mlp_input)
+        #returning generated image
+        return mlp_output
+    
+class BagFactorizedMLP(FactorizedMLP):
 
     '''
     Simple bag of words approach. Each kmers is a word. We only sum them.
