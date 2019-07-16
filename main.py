@@ -16,19 +16,21 @@ def build_parser():
         description="")
 
     parser.add_argument('--epoch', default=10, type=int, help='The number of epochs we want ot train the network.')
-    parser.add_argument('--seed', default=151911, type=int, help='Seed for random initialization and stuff.')
+    parser.add_argument('--seed', default=260389, type=int, help='Seed for random initialization and stuff.')
     parser.add_argument('--batch-size', default=10000, type=int, help="The batch size.")
     parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-    parser.add_argument('--data-dir', default='./data/', help='The folder contening the dataset.')
+    parser.add_argument('--data-dir', default='./data/', help='The folder contaning the dataset.')
+    parser.add_argument('--data-file', default='.', help='The data file with the dataset.')
     parser.add_argument('--save-dir', default='./testing123/', help='The folder where everything will be saved.')
     parser.add_argument('--dataset', choices=['gene', 'kmer'], default='gene', help='Which dataset to use.')
+    parser.add_argument('--transform', default=True,help='log10(exp+1)')
     parser.add_argument('--model', choices=['factor', 'bag'], default='factor', help='Which model to use.')
     parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
     parser.add_argument('--gpu-selection', type=int, default=0, help="selectgpu")
     # Model specific options
-    parser.add_argument('--layers-size', default=[500, 250, 100, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
+    parser.add_argument('--layers-size', default=[250, 75, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
     parser.add_argument('--emb_size', default=2, type=int, help='The size of the embeddings.')
     parser.add_argument('--weight-decay', default=1e-5, type=float, help='The size of the embeddings.')
 
@@ -123,18 +125,13 @@ def main(argv=None):
 
 
 
-#            import pdb
-#            pdb.set_trace()
             loss = criterion(y_pred, targets)
-            # TODO: the logging here.
             if no_b % 5 == 0:
-                #import pdb; pdb.set_trace()
                 print (f"Doing epoch {t},examples{no_b}/{len(dataset)}.Loss:{loss.data.cpu().numpy().reshape(1,)[0]}")
 
                 # Saving the emb
                 np.save(os.path.join(exp_dir, 'pixel_epoch_{}'.format(t)),my_model.emb_1.weight.cpu().data.numpy() )
                 np.save(os.path.join(exp_dir,'digit_epoch_{}'.format(t)),my_model.emb_2.weight.cpu().data.numpy())
-                #monitoring.save_everything(exp_dir, t, my_model, dataset.dataset)
 
 
             # Zero gradients, perform a backward pass, and update the weights.
@@ -142,18 +139,17 @@ def main(argv=None):
             loss.backward()
             optimizer.step()
             my_model.generate_datapoint([0,0], opt.gpu_selection)
-        monitoring.save_predictions(exp_dir, predictions)
-        #import pdb; pdb.set_trace()
+        #monitoring.save_predictions(exp_dir, predictions)
 
 
-        for i in range(0,xdata.shape[0],1000):
-            #import pdb; pdb.set_trace()
-            inputs = torch.FloatTensor(xdata[i:i+1000,:])
-            inputs = Variable(inputs, requires_grad=False).float()
-            if not opt.cpu:
-                inputs = inputs.cuda(opt.gpu_selection)
-            y_pred = my_model(inputs).float()
-            predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
+#        for i in range(0,xdata.shape[0],1000):
+#            #import pdb; pdb.set_trace()
+#            inputs = torch.FloatTensor(xdata[i:i+1000,:])
+#            inputs = Variable(inputs, requires_grad=False).float()
+#            if not opt.cpu:
+#                inputs = inputs.cuda(opt.gpu_selection)
+#            y_pred = my_model(inputs).float()
+#            predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
         #      monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
         #      monitoring.dump_error_by_gene(train_trace, dataset.dataset.data, outfname_g, exp_dir)
 
@@ -162,31 +158,31 @@ def main(argv=None):
         monitoring.save_checkpoint(my_model, optimizer, t, opt, exp_dir)
 
 
-        if opt.make_grid:
-            print ('generating grid and datapoints')
+#        if opt.make_grid:
+#            print ('generating grid and datapoints')
 
-            nb_points = opt.nb_gridpoints
-            x_min = min(my_model.emb_2.weight.data.cpu().numpy()[:,0])
-            y_min = min(my_model.emb_2.weight.data.cpu().numpy()[:,1])
-            x_max = max(my_model.emb_2.weight.data.cpu().numpy()[:,0])
-            y_max = max(my_model.emb_2.weight.data.cpu().numpy()[:,1])
-            x = np.linspace((np.floor(x_min*100))/100,(np.ceil(x_max*100))/100,nb_points)
-            y = np.linspace((np.floor(y_min*100))/100,(np.ceil(y_max*100))/100,nb_points)
-            X, Y = np.meshgrid(x,y)
-            T = []
-            print (f"I'll be making {(X.shape[0]*X.shape[1])**2} samples for a grid of {X.shape[0]} by {X.shape[1]} ")
-            count = 0
+#            nb_points = opt.nb_gridpoints
+#            x_min = min(my_model.emb_2.weight.data.cpu().numpy()[:,0])
+#            y_min = min(my_model.emb_2.weight.data.cpu().numpy()[:,1])
+#            x_max = max(my_model.emb_2.weight.data.cpu().numpy()[:,0])
+#            y_max = max(my_model.emb_2.weight.data.cpu().numpy()[:,1])
+#            x = np.linspace((np.floor(x_min*100))/100,(np.ceil(x_max*100))/100,nb_points)
+#            y = np.linspace((np.floor(y_min*100))/100,(np.ceil(y_max*100))/100,nb_points)
+#            X, Y = np.meshgrid(x,y)
+#            T = []
+#            print (f"I'll be making {(X.shape[0]*X.shape[1])**2} samples for a grid of {X.shape[0]} by {X.shape[1]} ")
+#            count = 0
 
-            for ix,iy in zip(X.reshape((X.shape[0]*X.shape[1],)),Y.reshape((Y.shape[0]*Y.shape[1],))):
-                if count%1000==0:
-                    print(f'made {count} samples')
+#            for ix,iy in zip(X.reshape((X.shape[0]*X.shape[1],)),Y.reshape((Y.shape[0]*Y.shape[1],))):
+#                if count%1000==0:
+#                    print(f'made {count} samples')
                 #import pdb; pdb.set_trace()
                 #np.save(os.path.join(exp_dir,'generated_patient{}'.format(count)),my_model.generate_datapoint([ix,iy],opt.gpu_selection).data.cpu().numpy())
-                T.append(my_model.generate_datapoint([ix,iy],opt.gpu_selection).data.cpu().numpy())
-                count+=1
-            np.save(os.path.join(exp_dir,'meshgrid_x.npy'),X)
-            np.save(os.path.join(exp_dir,'meshgrid_y.npy'),Y)
-            np.save(os.path.join(exp_dir,'generated_mesh_samples.npy'),T)
+#                T.append(my_model.generate_datapoint([ix,iy],opt.gpu_selection).data.cpu().numpy())
+#                count+=1
+#            np.save(os.path.join(exp_dir,'meshgrid_x.npy'),X)
+#            np.save(os.path.join(exp_dir,'meshgrid_y.npy'),Y)
+#            np.save(os.path.join(exp_dir,'generated_mesh_samples.npy'),T)
 
 
 

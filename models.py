@@ -15,7 +15,6 @@ class FactorizedMLP(nn.Module):
 
 
         # The embedding
-        # TODO: At one point we will probably need to refactor that for it to be more general. Maybe.
         assert len(inputs_size) == 2
 
         self.emb_1 = nn.Embedding(inputs_size[0], emb_size)
@@ -50,7 +49,6 @@ class FactorizedMLP(nn.Module):
         # Forward pass.
         mlp_input = torch.cat([emb_1, emb_2], 1)
 
-        # TODO: the proper way in pytorch is to use a Sequence layer.
         for layer in self.mlp_layers:
             mlp_input = layer(mlp_input)
             mlp_input = F.tanh(mlp_input)
@@ -58,9 +56,9 @@ class FactorizedMLP(nn.Module):
         mlp_output = self.last_layer(mlp_input)
 
         return mlp_output
+
     def generate_datapoint(self, e, gpu):
         #getting a datapoint embedding coordinate
-        #import pdb; pdb.set_trace()
         emb_1 = self.emb_1.weight.cpu().data.numpy()
         emb_2 = (np.ones(emb_1.shape[0]*2).reshape((emb_1.shape[0],2)))*e
         emb_1 = torch.FloatTensor(emb_1)
@@ -77,39 +75,14 @@ class FactorizedMLP(nn.Module):
         mlp_output = self.last_layer(mlp_input)
         return mlp_output
 
-class BagFaccorizedMLP(FactorizedMLP):
-
-    '''
-    Simple bag of words approach. Each kmers is a word. We only sum them.
-    '''
-
-    def get_embeddings(self, x):
-
-        kmer, patient = x[:, :-1], x[:, -1]
-        # Embedding.
-        kmer = self.emb_1(kmer.squeeze(-1).long())
-        patient = self.emb_2(patient.long())
-
-        # Sum the embeddings (TODO: try fancy RNN and stuff)
-        kmer = kmer.mean(dim=1)
-        return kmer, patient
-
 def get_model(opt, inputs_size, model_state=None):
 
-    # All of the different models.
-
-    # TODO: find a way to remove the if.
     if opt.model == 'factor':
         model_class = FactorizedMLP
-    elif opt.model == 'bag':
-        model_class = BagFactorizedMLP
     else:
         raise NotImplementedError()
 
-
-    model = model_class(layers_size=opt.layers_size, emb_size=opt.emb_size, inputs_size=inputs_size)
-
-    # If we load stuff
+    model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size)
     if model_state is not None:
         model.load_state_dict(model_state)
 
