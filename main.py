@@ -23,9 +23,10 @@ def build_parser():
     parser.add_argument('--data-dir', default='./data/', help='The folder contaning the dataset.')
     parser.add_argument('--data-file', default='.', help='The data file with the dataset.')
     parser.add_argument('--save-dir', default='./testing123/', help='The folder where everything will be saved.')
-    parser.add_argument('--dataset', choices=['gene', 'kmer'], default='gene', help='Which dataset to use.')
+    parser.add_argument('--dataset', choices=['gene', 'domaingene'], default='gene', help='Which dataset to use.')
+    parser.add_argument('--data-domain', default=2, type=int, help='Number of domains in the data for triple factemb')
     parser.add_argument('--transform', default=True,help='log10(exp+1)')
-    parser.add_argument('--model', choices=['factor', 'bag'], default='factor', help='Which model to use.')
+    parser.add_argument('--model', choices=['factor', 'triple'], default='factor', help='Which model to use.')
     parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
     parser.add_argument('--gpu-selection', type=int, default=0, help="selectgpu")
@@ -138,7 +139,7 @@ def main(argv=None):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            my_model.generate_datapoint([0,0], opt.gpu_selection)
+            #my_model.generate_datapoint([0,0], opt.gpu_selection)
         #monitoring.save_predictions(exp_dir, predictions)
 
 
