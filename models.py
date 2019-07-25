@@ -78,7 +78,7 @@ class FactorizedMLP(nn.Module):
 class TripleFactorizedMLP(nn.Module):
 
     def __init__(self, layers_size, inputs_size, emb_size=2):
-        super(FactorizedMLP, self).__init__()
+        super(TripleFactorizedMLP, self).__init__()
 
         self.layers_size = layers_size
         self.emb_size = emb_size
@@ -107,7 +107,6 @@ class TripleFactorizedMLP(nn.Module):
     def get_embeddings(self, x):
 
         gene, patient, domain = x[:, 0], x[:, 1], x[:, 2]
-        
         # Embedding.
         gene = self.emb_1(gene.long())
         patient = self.emb_2(patient.long())
@@ -163,12 +162,11 @@ def get_model(opt, inputs_size, model_state=None):
         model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size)
 
     elif opt.model == 'triple':
-        model_class = TripleFactorizedMLP. ###TODO how does the model get the input size again?
+        model_class = TripleFactorizedMLP
         model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size)
     else:
         raise NotImplementedError()
 
-    
     if model_state is not None:
         model.load_state_dict(model_state)
 

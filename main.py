@@ -24,7 +24,7 @@ def build_parser():
     parser.add_argument('--data-file', default='.', help='The data file with the dataset.')
     parser.add_argument('--save-dir', default='./testing123/', help='The folder where everything will be saved.')
     parser.add_argument('--dataset', choices=['gene', 'domaingene'], default='gene', help='Which dataset to use.')
-    parser.add_argument('--data-domain', default=2, type=int, help='Number of domains in the data for triple factemb')
+    parser.add_argument('--data-domain', default='.', help='Number of domains in the data for triple factemb')
     parser.add_argument('--transform', default=True,help='log10(exp+1)')
     parser.add_argument('--model', choices=['factor', 'triple'], default='factor', help='Which model to use.')
     parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
@@ -155,7 +155,7 @@ def main(argv=None):
         #      monitoring.dump_error_by_gene(train_trace, dataset.dataset.data, outfname_g, exp_dir)
 
 
-        print ("Saving the model...")
+        #print ("Saving the model...")
         monitoring.save_checkpoint(my_model, optimizer, t, opt, exp_dir)
 
 
