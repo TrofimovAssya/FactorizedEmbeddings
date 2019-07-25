@@ -93,7 +93,7 @@ class DomainGeneDataset(Dataset):
 
         ### masking the data if needed
         permutation = np.random.permutation(np.arange(self.X_data.shape[0]))
-        keep = int((100-self.masked)*self.X_data.shape[0])/100)
+        keep = int((100-self.masked)*self.X_data.shape[0]/100)
         self.X_data = self.X_data[:keep,:]
         self.Y_data = self.Y_data[:keep]
 
