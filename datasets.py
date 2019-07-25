@@ -9,11 +9,11 @@ import shutil
 class GeneDataset(Dataset):
     """Gene expression dataset"""
 
-    def __init__(self,root_dir='.',save_dir='.',data_file='data.npy', transform=None):
+    def __init__(self,root_dir='.',save_dir='.',data_file='data.npy', transform=None, masked = 0):
 
 
         data_path = os.path.join(root_dir, data_file)
-
+        self.masked = masked
         # Load the dataset
         self.data = np.load(data_path)
 
@@ -26,6 +26,13 @@ class GeneDataset(Dataset):
         self.root_dir = root_dir
         self.transform = transform # heh
         self.X_data, self.Y_data = self.dataset_make(self.data,log_transform=False)
+
+        ### masking the data if needed
+        permutation = np.random.permutation(np.arange(self.X_data.shape[0]))
+        keep = int((100-self.masked)*self.X_data.shape[0])/100
+        self.X_data = self.X_data[:keep,:]
+        self.Y_data = self.Y_data[:keep]
+
 
     def __len__(self):
         return len(self.X_data)
@@ -62,7 +69,7 @@ class GeneDataset(Dataset):
 class DomainGeneDataset(Dataset):
     """Gene expression dataset"""
 
-    def __init__(self,root_dir='.',save_dir='.',data_file='data.npy', domain_file = 'domain.npy', transform=True):
+    def __init__(self,root_dir='.',save_dir='.',data_file='data.npy', domain_file = 'domain.npy', transform=True, masked = 0):
 
 
         data_path = os.path.join(root_dir, data_file)
@@ -81,7 +88,16 @@ class DomainGeneDataset(Dataset):
 
         self.root_dir = root_dir
         self.transform = transform
-        self.X_data, self.Y_data = self.dataset_make(self.data,self.domain,log_transform=False)
+        self.X_data, self.Y_data = self.dataset_make(self.data,self.domain,log_transform=True)
+        ### TODO: figure out how to control the transform from main arguments
+
+        
+        ### masking the data if needed
+        permutation = np.random.permutation(np.arange(self.X_data.shape[0]))
+        keep = int((100-self.masked)*self.X_data.shape[0])/100
+        self.X_data = self.X_data[:keep,:]
+        self.Y_data = self.Y_data[:keep]
+
 
     def __len__(self):
         return len(self.X_data)
@@ -127,9 +143,10 @@ def get_dataset(opt,exp_dir):
     # All of the different datasets.
 
     if opt.dataset == 'gene':
-        dataset = GeneDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform)
+        dataset = GeneDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform, masked = opt.mask)
     elif opt.dataset == 'domaingene':
-        dataset = DomainGeneDataset(root_dir=opt.data_dir, save_dir = exp_dir,data_file = opt.data_file, domain_file = opt.data_domain, transform = opt.transform)
+        dataset = DomainGeneDataset(root_dir=opt.data_dir, save_dir = exp_dir,data_file = opt.data_file, 
+            domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask)
     else:
         raise NotImplementedError()
 
