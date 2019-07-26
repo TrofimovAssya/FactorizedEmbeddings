@@ -30,6 +30,22 @@ def create_experiment_folder(opt):
 
     return exp_dir
 
+def plot_sample_embs():
+
+    pass   
+
+    plt.figure()
+
+    plt.title(title)
+    plt.xlabel('emb1')
+    plt.ylabel('emb2')
+    plt.legend()
+
+
+    img_path = os.path.join(output, f'{fname}.png')
+    plt.savefig(img_path)
+
+
 
 def save_checkpoint(model, optimizer, epoch, opt, exp_dir, filename='checkpoint.pth.tar'):
 

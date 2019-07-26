@@ -75,6 +75,23 @@ class FactorizedMLP(nn.Module):
         mlp_output = self.last_layer(mlp_input)
         return mlp_output
 
+    def freeze_all(self):
+
+        for layer in self.mlp_layers:
+            layer.weight.requires_grad = False
+            layer.bias.requires_grad = False
+        self.emb_1.weight.requires_grad = False
+
+
+    def unfreeze_all(self):
+
+        for layer in self.mlp_layers:
+            layer.weight.requires_grad = True
+            layer.bias.requires_grad = True
+        self.emb_1.weight.requires_grad = True
+
+
+
 class TripleFactorizedMLP(nn.Module):
 
     def __init__(self, layers_size, inputs_size, emb_size=2):
