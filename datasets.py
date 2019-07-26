@@ -25,11 +25,11 @@ class GeneDataset(Dataset):
 
         self.root_dir = root_dir
         self.transform = transform # heh
-        self.X_data, self.Y_data = self.dataset_make(self.data,log_transform=False)
+        self.X_data, self.Y_data = self.dataset_make(self.data,log_transform=True)
 
         ### masking the data if needed
         permutation = np.random.permutation(np.arange(self.X_data.shape[0]))
-        keep = int((100-self.masked)*self.X_data.shape[0])/100
+        keep = int((100-self.masked)*self.X_data.shape[0]/100)
         self.X_data = self.X_data[:keep,:]
         self.Y_data = self.Y_data[:keep]
 
@@ -91,10 +91,9 @@ class DomainGeneDataset(Dataset):
         self.X_data, self.Y_data = self.dataset_make(self.data,self.domain,log_transform=True)
         ### TODO: figure out how to control the transform from main arguments
 
-        
         ### masking the data if needed
         permutation = np.random.permutation(np.arange(self.X_data.shape[0]))
-        keep = int((100-self.masked)*self.X_data.shape[0])/100
+        keep = int((100-self.masked)*self.X_data.shape[0]/100)
         self.X_data = self.X_data[:keep,:]
         self.Y_data = self.Y_data[:keep]
 
