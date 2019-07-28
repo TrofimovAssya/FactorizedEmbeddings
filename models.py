@@ -36,7 +36,7 @@ class FactorizedMLP(nn.Module):
         ### Warm start for gene embeddings
         if not set_gene_emb == '.':
             new_embs = np.load(set_gene_emb)
-            self.emb_1.weight.data = torch.FloatTensor(set_new_embs)
+            self.emb_1.weight.data = torch.FloatTensor(new_embs)
 
         ### PCA start for sample embeddings
         if not warm_pca == '.':
