@@ -40,7 +40,7 @@ class FactorizedMLP(nn.Module):
 
         ### PCA start for sample embeddings
         if not warm_pca == '.':
-            self.start_with_PCA(datadir, datafile = warm_pca)
+            self.start_with_PCA(datadir = data_dir, datafile = warm_pca)
 
     def get_embeddings(self, x):
 
