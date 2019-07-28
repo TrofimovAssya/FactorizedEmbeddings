@@ -69,6 +69,7 @@ class FactorizedMLP(nn.Module):
 
     def start_with_PCA(self, datadir = 'data/',datafile = '.'):
         data = np.load(''.join([datadir, datafile]))
+        data = np.log10(data+1)
         pca = PCA(n_components = 2)
         X_pca = pca.fit_transform(data)
         self.emb_2.weight.data = torch.FloatTensor(X_pca)
