@@ -33,6 +33,9 @@ def build_parser():
     # Model specific options
     parser.add_argument('--layers-size', default=[250, 75, 50, 25, 10], type=int, nargs='+', help='Number of layers to use.')
     parser.add_argument('--emb_size', default=2, type=int, help='The size of the embeddings.')
+    parser.add_argument('--set-gene-emb', default='.', help='Starting points for gene embeddings.')
+    parser.add_argument('--warm_pca', default='.', help='Datafile to use as a PCA warm start for the sample embeddings')
+
     parser.add_argument('--weight-decay', default=1e-5, type=float, help='The size of the embeddings.')
     parser.add_argument('--model', choices=['factor', 'triple'], default='factor', help='Which model to use.')
     parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
@@ -77,7 +80,7 @@ def main(argv=None):
 
     # Creating a model
     print ("Getting the model...")
-    my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir, opt, dataset.dataset.input_size())
+    my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir, opt, dataset.dataset.input_size(), )
 
     # Training optimizer and stuff
     criterion = torch.nn.MSELoss()

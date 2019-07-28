@@ -3,10 +3,11 @@ import torch.nn.functional as F
 from torch import nn
 import numpy as np
 from torch.autograd import Variable
+from sklearn.decomposition import PCA
 
 class FactorizedMLP(nn.Module):
 
-    def __init__(self, layers_size, inputs_size, emb_size=2):
+    def __init__(self, layers_size, inputs_size, emb_size=2, data_dir = 'data/', set_gene_emb = '.', warm_pca = '.'):
         super(FactorizedMLP, self).__init__()
 
         self.layers_size = layers_size
@@ -32,6 +33,15 @@ class FactorizedMLP(nn.Module):
         # Last layer
         self.last_layer = nn.Linear(dim[-1], 1)
 
+        ### Warm start for gene embeddings
+        if not set_gene_emb == '.':
+            new_embs = np.load(set_gene_emb)
+            self.emb_1.weight.data = torch.FloatTensor(set_new_embs)
+
+        ### PCA start for sample embeddings
+        if not warm_pca == '.':
+            self.start_with_PCA(datadir, datafile = warm_pca)
+
     def get_embeddings(self, x):
 
         gene, patient = x[:, 0], x[:, 1]
@@ -56,6 +66,13 @@ class FactorizedMLP(nn.Module):
         mlp_output = self.last_layer(mlp_input)
 
         return mlp_output
+
+    def start_with_PCA(self, datadir = 'data/',datafile = '.'):
+        data = np.load(''.join([datadir, datafile]))
+        pca = PCA(n_components = 2)
+        X_pca = pca.fit_transform(data)
+        self.emb_2.weight.data = torch.FloatTensor(X_pca)
+
 
     def generate_datapoint(self, e, gpu):
         #getting a datapoint embedding coordinate
@@ -176,7 +193,7 @@ def get_model(opt, inputs_size, model_state=None):
 
     if opt.model == 'factor':
         model_class = FactorizedMLP
-        model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size)
+        model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size, data_dir = opt.data_dir, set_gene_emb = opt.set_gene_emb, warm_pca = opt.warm_pca)
 
     elif opt.model == 'triple':
         model_class = TripleFactorizedMLP
