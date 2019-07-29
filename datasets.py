@@ -77,6 +77,7 @@ class DomainGeneDataset(Dataset):
         # Load the dataset
         self.data = np.load(data_path)
         self.domain = np.load(domain_path)
+        self.masked = masked
 
         self.nb_patient = self.data.shape[0]
         self.nb_gene = self.data.shape[1]
@@ -116,7 +117,7 @@ class DomainGeneDataset(Dataset):
         indices_d = np.arange(len(set(domains)))
 
         X_data = np.transpose([np.tile(indices_g, len(indices_p1)), np.repeat(indices_p1, len(indices_g))])
-        X_dom = domains[X_data[:,0]]
+        X_dom = domains[X_data[:,1]]
         X_dom = X_dom.reshape((X_dom.shape[0],1))
         X_data = np.hstack((X_data, X_dom))
         X_data = X_data.astype('int32')
