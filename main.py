@@ -25,7 +25,7 @@ def build_parser():
     ### Dataset specific options
     parser.add_argument('--data-dir', default='./data/', help='The folder contaning the dataset.')
     parser.add_argument('--data-file', default='.', help='The data file with the dataset.')
-    parser.add_argument('--dataset', choices=['gene', 'domaingene'], default='gene', help='Which dataset to use.')
+    parser.add_argument('--dataset', choices=['gene', 'domaingene', 'impute'], default='gene', help='Which dataset to use.')
     parser.add_argument('--mask', type=int, default=0, help="percentage of masked values")
     parser.add_argument('--data-domain', default='.', help='Number of domains in the data for triple factemb')
     parser.add_argument('--transform', default=True,help='log10(exp+1)')
