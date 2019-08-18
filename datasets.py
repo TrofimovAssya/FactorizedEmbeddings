@@ -161,7 +161,7 @@ class ImputeGeneDataset(Dataset):
 
         ### masking the data if needed
         permutation = np.random.permutation(np.arange(self.X_data.shape[0]))
-        keep = int((100-self.masked)*self.X_data.shape[0]/100)
+        keep = permutation[:masked]
         self.X_data = self.X_data[:keep,:]
         self.Y_data = self.Y_data[:keep]
 
@@ -198,7 +198,7 @@ class ImputeGeneDataset(Dataset):
         return info
 
 
-def get_dataset(opt,exp_dir):
+def get_dataset(opt,exp_dir, masked=0):
 
     # All of the different datasets.
 
@@ -208,7 +208,7 @@ def get_dataset(opt,exp_dir):
         dataset = DomainGeneDataset(root_dir=opt.data_dir, save_dir = exp_dir,data_file = opt.data_file, 
             domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask)
     elif opt.dataset == 'impute':
-        dataset = ImputeGeneDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform, masked = opt.mask)
+        dataset = ImputeGeneDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform, masked = masked)
     else:
         raise NotImplementedError()
 

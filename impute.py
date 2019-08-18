@@ -20,11 +20,11 @@ def build_parser():
     ### Dataset specific options
     parser.add_argument('--data-dir', default='./data/', help='The folder contaning the dataset.')
     parser.add_argument('--data-file', default='.', help='The data file with the dataset.')
-    parser.add_argument('--dataset', choices=['gene', 'domaingene', 'impute'], default='gene', help='Which dataset to use.')
-    parser.add_argument('--mask', type=int, default=0, help="percentage of masked values")
+    parser.add_argument('--dataset', choices=['gene', 'domaingene', 'impute'], default='impute', help='Which dataset to use.')
     parser.add_argument('--data-domain', default='.', help='Number of domains in the data for triple factemb')
     parser.add_argument('--transform', default=True,help='log10(exp+1)')
-
+    parser.add_argument('--imputation-list', default = [1,5,10,25,100,250,500,1000,2500,5000,10000,25000], type=int, nargs='+', help='number of genes to give the algorithm')
+    parser.add_argument('--nb-shuffles', default = 25, type=int, help='number of genes to give the algorithm')
     
     # GPU options
     parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
@@ -37,7 +37,7 @@ def build_parser():
     parser.add_argument('--nb-gridpoints', default=50, type=int, help='Number of points on each side of the meshgrid')
 
     # Saving directory options
-    parser.add_argument('--save-dir', default='./testing123/', help='The folder where everything will be saved.')
+    parser.add_argument('--new-save-dir', default='./imputation_shuffles123', help='The folder where everything will be saved.')
 
     return parser
 
@@ -51,13 +51,9 @@ def parse_args(argv):
     return opt
 
 
-
-#### get the number of patients
-#### freeze all
 #### replace the embeddings of emb_2 for the N first patients by zeros
 #### train on only the new dataset on the number of genes specified
 #### generate the rest of samples
-### CUDA shananigans
 
 def impute(argv=None):
 
@@ -69,6 +65,7 @@ def impute(argv=None):
     torch.manual_seed(seed)
 
     exp_dir = opt.load_folder
+    new_exp_dir = opt.new_save_dir
     if exp_dir is None: 
         print ("Experiment doesn't exist!")
     else:
@@ -79,7 +76,14 @@ def impute(argv=None):
         # Creating a model
         print ("Getting the model...")
         my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir, opt, dataset.dataset.input_size(), )
+        
+        ### Making sure updates are only on the patient embedding layer
         my_model.freeze_all()
+        optimizer = torch.optim.RMSprop(my_model.emb_2.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
+
+        ### Replacing the first embeddings as the new number of patients to predict
+        my_model.emb_2.weight[:dataset.dataset.nb_patient,:] = Variable(torch.FloatTensor(np.zeros((dataset.dataset.nb_patient,2))), requires_grad=False).float()
+
         # Training optimizer and stuff
         criterion = torch.nn.MSELoss()
 
@@ -100,60 +104,71 @@ def impute(argv=None):
         xdata = np.transpose([np.tile(indices_genes, len(indices_patients)),
                               np.repeat(indices_patients, len(indices_genes))])
 
-        progress_bar_modulo = len(dataset)/100
-        for t in range(epoch, opt.epoch):
 
-            start_timer = time.time()
+        for nb_genes in opt.imputation_list:
+            print (f'Imputation with {nb_genes} genes given...')
+            for shuffle in range(opt.nb_shuffles):
+                progress_bar_modulo = len(dataset)/100
 
-            if opt.save_error:
-                outfname_g = '_'.join(['gene_epoch',str(t),'prediction.npy'])
-                outfname_g = os.path.join(exp_dir,outfname_g)
-                outfname_t = '_'.join(['tissue_epoch',str(t),'prediction.npy'])
-                outfname_t = os.path.join(exp_dir,outfname_t)
-                train_trace = np.zeros((dataset.dataset.nb_gene, dataset.dataset.nb_patient))
+                print ("Re-getting the dataset...")
+                dataset = datasets.get_dataset(opt,exp_dir, nb_genes)
 
-            for no_b, mini in enumerate(dataset):
+                #monitoring and predictions
+                predictions =np.zeros((dataset.dataset.nb_patient,my_model.emb_1.shape[0]))
+                indices_patients = np.arange(predictions.shape[0])
+                indices_genes = np.arange(predictions.shape[1])
+                xdata = np.transpose([np.tile(indices_genes, len(indices_patients)),
+                                      np.repeat(indices_patients, len(indices_genes))])
 
-                inputs, targets = mini[0], mini[1]
+                for t in range(epoch, opt.epoch):
 
-                inputs = Variable(inputs, requires_grad=False).float()
-                targets = Variable(targets, requires_grad=False).float()
+                    start_timer = time.time()
 
-                if not opt.cpu:
-                    inputs = inputs.cuda(opt.gpu_selection)
-                    targets = targets.cuda(opt.gpu_selection)
+                    #if opt.save_error:
+                        #outfname_g = f'shuffle_{shuffle}_{nb_genes}_genes_epoch_{t}_prediction_genes.npy'
+                        #outfname_g = os.path.join(new_exp_dir,outfname_g)
+                        #outfname_t = f'shuffle_{shuffle}_{nb_genes}_genes_epoch_{t}_prediction_tissue.npy'
+                        #outfname_t = os.path.join(new_exp_dir,outfname_t)
+                        #train_trace = np.zeros((dataset.dataset.nb_gene, dataset.dataset.nb_patient))
 
-                # Forward pass: Compute predicted y by passing x to the model
-                y_pred = my_model(inputs).float()
+                    for no_b, mini in enumerate(dataset):
 
-                if opt.save_error:
-                    # Log the predicted values per sample and per gene (S.L. validation)
-                    batch_inputs = mini[0].numpy()
-                    predicted_values = y_pred.data.cpu().numpy()
-                    train_trace[batch_inputs[:,0],batch_inputs[:,1]] = predicted_values[:,0]
-                #import pdb; pdb.set_trace()
-                targets = torch.reshape(targets,(targets.shape[0],1))
-                # Compute and print loss
+                        inputs, targets = mini[0], mini[1]
+
+                        inputs = Variable(inputs, requires_grad=False).float()
+                        targets = Variable(targets, requires_grad=False).float()
+
+                        if not opt.cpu:
+                            inputs = inputs.cuda(opt.gpu_selection)
+                            targets = targets.cuda(opt.gpu_selection)
+
+                        # Forward pass: Compute predicted y by passing x to the model
+                        y_pred = my_model(inputs).float()
+
+                        #if opt.save_error:
+                            ## Log the predicted values per sample and per gene (S.L. validation)
+                            #batch_inputs = mini[0].numpy()
+                            #predicted_values = y_pred.data.cpu().numpy()
+                            #train_trace[batch_inputs[:,0],batch_inputs[:,1]] = predicted_values[:,0]
+                        #import pdb; pdb.set_trace()
+                        targets = torch.reshape(targets,(targets.shape[0],1))
+                        # Compute and print loss
+
+                        loss = criterion(y_pred, targets)
+                        if no_b % 5 == 0:
+                            print (f"Doing epoch {t},examples{no_b}/{len(dataset)}.Loss:{loss.data.cpu().numpy().reshape(1,)[0]}")
+
+                            # Saving the emb
+                            np.save(os.path.join(exp_dir, 'pixel_epoch_{}'.format(t)),my_model.emb_1.weight.cpu().data.numpy() )
+                            np.save(os.path.join(exp_dir,'digit_epoch_{}'.format(t)),my_model.emb_2.weight.cpu().data.numpy())
 
 
-
-
-                loss = criterion(y_pred, targets)
-                if no_b % 5 == 0:
-                    print (f"Doing epoch {t},examples{no_b}/{len(dataset)}.Loss:{loss.data.cpu().numpy().reshape(1,)[0]}")
-
-                    # Saving the emb
-                    np.save(os.path.join(exp_dir, 'pixel_epoch_{}'.format(t)),my_model.emb_1.weight.cpu().data.numpy() )
-                    np.save(os.path.join(exp_dir,'digit_epoch_{}'.format(t)),my_model.emb_2.weight.cpu().data.numpy())
-
-
-                # Zero gradients, perform a backward pass, and update the weights.
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                #my_model.generate_datapoint([0,0], opt.gpu_selection)
-            #monitoring.save_predictions(exp_dir, predictions)
-
+                        # Zero gradients, perform a backward pass, and update the weights.
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
+                        #my_model.generate_datapoint([0,0], opt.gpu_selection)
+                    
 
             for i in range(0,xdata.shape[0],1000):
                 #import pdb; pdb.set_trace()
@@ -163,6 +178,11 @@ def impute(argv=None):
                     inputs = inputs.cuda(opt.gpu_selection)
                 y_pred = my_model(inputs).float()
                 predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
+            outfname_pred = f'shuffle_{shuffle}_{nb_genes}_genes_epoch_{t}_prediction.npy'
+            outfname_pred = os.path.join(new_exp_dir,outfname_pred)
+            monitoring.save_predictions(outfname_pred, predictions)
+
+
             #      monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
             #      monitoring.dump_error_by_gene(train_trace, dataset.dataset.data, outfname_g, exp_dir)
 
