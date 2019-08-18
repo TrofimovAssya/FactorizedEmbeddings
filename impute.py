@@ -79,6 +79,7 @@ def impute(argv=None):
         # creating the dataset
         print ("Getting the dataset...")
         dataset = datasets.get_dataset(opt,exp_dir)
+        old_nb_patients = dataset.dataset.nb_patient
         new_data_file = opt.new_data_file
         imputation_list = opt.imputation_list
         nb_shuffles = opt.nb_shuffles
@@ -88,7 +89,7 @@ def impute(argv=None):
         print ("Getting the model...")
         my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir,opt,dataset.dataset.input_size(),impute=True)
         ### Making sure updates are only on the patient embedding layer
-        my_model.freeze_all()
+        #my_model.freeze_all()
         #optimizer = torch.optim.RMSprop(my_model.emb_2.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
 
         ### Replacing the first embeddings as the new number of patients to predict
@@ -105,26 +106,14 @@ def impute(argv=None):
         print ("Start training.")
 
 
-
-
-        #monitoring and predictions
-        predictions =np.zeros((dataset.dataset.nb_patient,my_model.emb_1.weight.shape[0]))
-        indices_patients = np.arange(dataset.dataset.nb_patient)
-        indices_genes = np.arange(my_model.emb_1.weight.shape[0])
-        xdata = np.transpose([np.tile(indices_genes, len(indices_patients)),
-                              np.repeat(indices_patients, len(indices_genes))])
-
-
         for nb_genes in imputation_list:
             print (f'Imputation with {nb_genes} genes given...')
             for shuffle in range(nb_shuffles):
-                my_model.emb_2.weight[:dataset.dataset.nb_patient,:] = Variable(torch.FloatTensor(np.zeros((dataset.dataset.nb_patient,2))),requires_grad=False).float() 
-                progress_bar_modulo = len(dataset)/100
                 opt.data_file = new_data_file
-
                 print ("Re-getting the dataset...")
                 dataset = datasets.get_dataset(opt,exp_dir, masked = nb_genes)
-
+                new_embs = np.zeros((dataset.dataset.nb_patient,2))
+                
                 #monitoring and predictions
                 predictions=np.zeros((dataset.dataset.nb_patient,my_model.emb_1.weight.shape[0]))
                 indices_patients = np.arange(predictions.shape[0])
@@ -132,8 +121,16 @@ def impute(argv=None):
                 xdata = np.transpose([np.tile(indices_genes, len(indices_patients)),
                                       np.repeat(indices_patients, len(indices_genes))])
 
-                for t in range(epoch, opt.epoch):
 
+                progress_bar_modulo = len(dataset)/100
+
+
+
+                for t in range(epoch, opt.epoch):
+                    new_embs = my_model.emb_2.weight.cpu().data.numpy()[dataset.dataset.nb_patient,:]
+
+                    my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir,opt,dataset.dataset.input_size(),impute=True)
+                    my_model.emb_2.weight[:dataset.dataset.nb_patient,:] = Variable(torch.FloatTensor(new_embs),requires_grad=False).float() 
                     start_timer = time.time()
 
                     #if opt.save_error:
@@ -180,6 +177,7 @@ def impute(argv=None):
                         import pdb; pdb.set_trace()
                         loss.backward()
                         optimizer.step()
+
                         #my_model.generate_datapoint([0,0], opt.gpu_selection)
 
                 for i in range(0,xdata.shape[0],1000):
