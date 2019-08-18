@@ -16,16 +16,23 @@ def build_parser():
 
     ### Loading options
     parser.add_argument('--load-folder', help='The folder where to load and restart the training.')
+    parser.add_argument('--epoch', default=10, type=int, help='The number of epochs we want ot train the network.')
+    parser.add_argument('--seed', default=260389,type=int, help='Seed for random initialization and stuff.')
+    parser.add_argument('--batch-size', default=10000, type=int, help="The batch size.")
+    parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
+    parser.add_argument('--momentum',default=0.9, type=float, help='momentum')
+
+
 
     ### Dataset specific options
     parser.add_argument('--data-dir', default='./data/', help='The folder contaning the dataset.')
     parser.add_argument('--data-file', default='.', help='The data file with the dataset.')
+    parser.add_argument('--new-data-file', default='.', help='The data file with the dataset to impute.')
     parser.add_argument('--dataset', choices=['gene', 'domaingene', 'impute'], default='impute', help='Which dataset to use.')
     parser.add_argument('--data-domain', default='.', help='Number of domains in the data for triple factemb')
     parser.add_argument('--transform', default=True,help='log10(exp+1)')
     parser.add_argument('--imputation-list', default = [1,5,10,25,100,250,500,1000,2500,5000,10000,25000], type=int, nargs='+', help='number of genes to give the algorithm')
     parser.add_argument('--nb-shuffles', default = 25, type=int, help='number of genes to give the algorithm')
-    
     # GPU options
     parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
@@ -37,7 +44,7 @@ def build_parser():
     parser.add_argument('--nb-gridpoints', default=50, type=int, help='Number of points on each side of the meshgrid')
 
     # Saving directory options
-    parser.add_argument('--new-save-dir', default='./imputation_shuffles123', help='The folder where everything will be saved.')
+    parser.add_argument('--save-dir', default='./imputation_shuffles123', help='The folder where everything will be saved.')
 
     return parser
 
@@ -65,18 +72,21 @@ def impute(argv=None):
     torch.manual_seed(seed)
 
     exp_dir = opt.load_folder
-    new_exp_dir = opt.new_save_dir
+    new_exp_dir = monitoring.create_experiment_folder(opt)
     if exp_dir is None: 
         print ("Experiment doesn't exist!")
     else:
         # creating the dataset
         print ("Getting the dataset...")
         dataset = datasets.get_dataset(opt,exp_dir)
+        new_data_file = opt.new_data_file
+        imputation_list = opt.imputation_list
+        nb_shuffles = opt.nb_shuffles
+
 
         # Creating a model
         print ("Getting the model...")
         my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir, opt, dataset.dataset.input_size(), )
-        
         ### Making sure updates are only on the patient embedding layer
         my_model.freeze_all()
         optimizer = torch.optim.RMSprop(my_model.emb_2.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
@@ -97,24 +107,27 @@ def impute(argv=None):
 
 
 
+        import pdb; pdb.set_trace()
+        opt.data_file = new_data_file
+        dataset = datasets.get_dataset(opt,exp_dir)
         #monitoring and predictions
-        predictions =np.zeros((dataset.dataset.nb_patient,my_model.emb_1.shape[0]))
+        predictions =np.zeros((dataset.dataset.nb_patient,my_model.emb_1.weight.shape[0]))
         indices_patients = np.arange(dataset.dataset.nb_patient)
-        indices_genes = np.arange(my_model.emb_1.shape[0])
+        indices_genes = np.arange(my_model.emb_1.weight.shape[0])
         xdata = np.transpose([np.tile(indices_genes, len(indices_patients)),
                               np.repeat(indices_patients, len(indices_genes))])
 
 
-        for nb_genes in opt.imputation_list:
+        for nb_genes in imputation_list:
             print (f'Imputation with {nb_genes} genes given...')
-            for shuffle in range(opt.nb_shuffles):
+            for shuffle in range(nb_shuffles):
                 progress_bar_modulo = len(dataset)/100
 
                 print ("Re-getting the dataset...")
-                dataset = datasets.get_dataset(opt,exp_dir, nb_genes)
+                dataset = datasets.get_dataset(opt,exp_dir, masked = nb_genes)
 
                 #monitoring and predictions
-                predictions =np.zeros((dataset.dataset.nb_patient,my_model.emb_1.shape[0]))
+                predictions=np.zeros((dataset.dataset.nb_patient,my_model.emb_1.weight.shape[0]))
                 indices_patients = np.arange(predictions.shape[0])
                 indices_genes = np.arange(predictions.shape[1])
                 xdata = np.transpose([np.tile(indices_genes, len(indices_patients)),
@@ -159,8 +172,8 @@ def impute(argv=None):
                             print (f"Doing epoch {t},examples{no_b}/{len(dataset)}.Loss:{loss.data.cpu().numpy().reshape(1,)[0]}")
 
                             # Saving the emb
-                            np.save(os.path.join(exp_dir, 'pixel_epoch_{}'.format(t)),my_model.emb_1.weight.cpu().data.numpy() )
-                            np.save(os.path.join(exp_dir,'digit_epoch_{}'.format(t)),my_model.emb_2.weight.cpu().data.numpy())
+                            np.save(os.path.join(new_save_dir, 'pixel_epoch_{}'.format(t)),my_model.emb_1.weight.cpu().data.numpy() )
+                            np.save(os.path.join(new_save_dir,'digit_epoch_{}'.format(t)),my_model.emb_2.weight.cpu().data.numpy())
 
 
                         # Zero gradients, perform a backward pass, and update the weights.
@@ -168,7 +181,6 @@ def impute(argv=None):
                         loss.backward()
                         optimizer.step()
                         #my_model.generate_datapoint([0,0], opt.gpu_selection)
-                    
 
             for i in range(0,xdata.shape[0],1000):
                 #import pdb; pdb.set_trace()
@@ -179,7 +191,7 @@ def impute(argv=None):
                 y_pred = my_model(inputs).float()
                 predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
             outfname_pred = f'shuffle_{shuffle}_{nb_genes}_genes_epoch_{t}_prediction.npy'
-            outfname_pred = os.path.join(new_exp_dir,outfname_pred)
+            outfname_pred = os.path.join(new_save_dir,outfname_pred)
             monitoring.save_predictions(outfname_pred, predictions)
 
 

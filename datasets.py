@@ -159,11 +159,13 @@ class ImputeGeneDataset(Dataset):
         self.transform = transform # heh
         self.X_data, self.Y_data = self.dataset_make(self.data,log_transform=True)
 
-        ### masking the data if needed
-        permutation = np.random.permutation(np.arange(self.X_data.shape[0]))
-        keep = permutation[:masked]
-        self.X_data = self.X_data[:keep,:]
-        self.Y_data = self.Y_data[:keep]
+        if masked>0:
+            ### masking the data if needed
+            permutation = np.random.permutation(np.arange(self.nb_gene))
+            keep = permutation[:masked]
+            import pdb; pdb.set_trace()
+            self.X_data = self.X_data[:keep,:]
+            self.Y_data = self.Y_data[:keep]
 
 
     def __len__(self):
