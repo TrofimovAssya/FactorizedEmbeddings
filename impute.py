@@ -107,8 +107,6 @@ def impute(argv=None):
 
 
 
-        import pdb; pdb.set_trace()
-        opt.data_file = new_data_file
         dataset = datasets.get_dataset(opt,exp_dir)
         #monitoring and predictions
         predictions =np.zeros((dataset.dataset.nb_patient,my_model.emb_1.weight.shape[0]))
@@ -182,17 +180,17 @@ def impute(argv=None):
                         optimizer.step()
                         #my_model.generate_datapoint([0,0], opt.gpu_selection)
 
-            for i in range(0,xdata.shape[0],1000):
-                #import pdb; pdb.set_trace()
-                inputs = torch.FloatTensor(xdata[i:i+1000,:])
-                inputs = Variable(inputs, requires_grad=False).float()
-                if not opt.cpu:
-                    inputs = inputs.cuda(opt.gpu_selection)
-                y_pred = my_model(inputs).float()
-                predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
-            outfname_pred = f'shuffle_{shuffle}_{nb_genes}_genes_epoch_{t}_prediction.npy'
-            outfname_pred = os.path.join(new_save_dir,outfname_pred)
-            monitoring.save_predictions(outfname_pred, predictions)
+                for i in range(0,xdata.shape[0],1000):
+                    #import pdb; pdb.set_trace()
+                    inputs = torch.FloatTensor(xdata[i:i+1000,:])
+                    inputs = Variable(inputs, requires_grad=False).float()
+                    if not opt.cpu:
+                        inputs = inputs.cuda(opt.gpu_selection)
+                    y_pred = my_model(inputs).float()
+                    predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
+                outfname_pred = f'shuffle_{shuffle}_{nb_genes}_genes_epoch_{t}_prediction.npy'
+                outfname_pred = os.path.join(new_save_dir,outfname_pred)
+                monitoring.save_predictions(outfname_pred, predictions)
 
 
             #      monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
