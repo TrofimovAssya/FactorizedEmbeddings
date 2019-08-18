@@ -59,7 +59,7 @@ def save_checkpoint(model, optimizer, epoch, opt, exp_dir, filename='checkpoint.
     filename = os.path.join(exp_dir, filename)
     torch.save(state, filename)
 
-def load_checkpoint(load_folder, opt, input_size, filename='checkpoint.pth.tar'):
+def load_checkpoint(load_folder, opt,input_size,filename='checkpoint.pth.tar',impute=False):
 
     # Model
     model_state = None
@@ -110,6 +110,8 @@ def load_checkpoint(load_folder, opt, input_size, filename='checkpoint.pth.tar')
 
     # Get the optimizer
     optimizer = torch.optim.RMSprop(my_model.parameters(), lr=new_opt.lr, weight_decay=new_opt.weight_decay)
+    #if impute:
+    #    optimizer = torch.optim.RMSprop(my_model.emb_2.parameters(), lr=new_opt.lr, weight_decay=new_opt.weight_decay)
     if optimizer_state is not None:
         optimizer.load_state_dict(optimizer_state)
 

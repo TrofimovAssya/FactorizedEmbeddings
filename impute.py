@@ -72,7 +72,7 @@ def impute(argv=None):
     torch.manual_seed(seed)
 
     exp_dir = opt.load_folder
-    new_exp_dir = monitoring.create_experiment_folder(opt)
+    new_save_dir = monitoring.create_experiment_folder(opt)
     if exp_dir is None: 
         print ("Experiment doesn't exist!")
     else:
@@ -86,10 +86,10 @@ def impute(argv=None):
 
         # Creating a model
         print ("Getting the model...")
-        my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir, opt, dataset.dataset.input_size(), )
+        my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir,opt,dataset.dataset.input_size(),impute=True)
         ### Making sure updates are only on the patient embedding layer
         my_model.freeze_all()
-        optimizer = torch.optim.RMSprop(my_model.emb_2.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
+        #optimizer = torch.optim.RMSprop(my_model.emb_2.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
 
         ### Replacing the first embeddings as the new number of patients to predict
         my_model.emb_2.weight[:dataset.dataset.nb_patient,:] = Variable(torch.FloatTensor(np.zeros((dataset.dataset.nb_patient,2))), requires_grad=False).float()
@@ -107,7 +107,6 @@ def impute(argv=None):
 
 
 
-        dataset = datasets.get_dataset(opt,exp_dir)
         #monitoring and predictions
         predictions =np.zeros((dataset.dataset.nb_patient,my_model.emb_1.weight.shape[0]))
         indices_patients = np.arange(dataset.dataset.nb_patient)
@@ -119,7 +118,9 @@ def impute(argv=None):
         for nb_genes in imputation_list:
             print (f'Imputation with {nb_genes} genes given...')
             for shuffle in range(nb_shuffles):
+                my_model.emb_2.weight[:dataset.dataset.nb_patient,:] = Variable(torch.FloatTensor(np.zeros((dataset.dataset.nb_patient,2))),requires_grad=False).float() 
                 progress_bar_modulo = len(dataset)/100
+                opt.data_file = new_data_file
 
                 print ("Re-getting the dataset...")
                 dataset = datasets.get_dataset(opt,exp_dir, masked = nb_genes)
@@ -176,6 +177,7 @@ def impute(argv=None):
 
                         # Zero gradients, perform a backward pass, and update the weights.
                         optimizer.zero_grad()
+                        import pdb; pdb.set_trace()
                         loss.backward()
                         optimizer.step()
                         #my_model.generate_datapoint([0,0], opt.gpu_selection)
@@ -188,7 +190,7 @@ def impute(argv=None):
                         inputs = inputs.cuda(opt.gpu_selection)
                     y_pred = my_model(inputs).float()
                     predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
-                outfname_pred = f'shuffle_{shuffle}_{nb_genes}_genes_epoch_{t}_prediction.npy'
+                outfname_pred = f'shuffle_{shuffle}_{nb_genes}_genes_prediction.npy'
                 outfname_pred = os.path.join(new_save_dir,outfname_pred)
                 monitoring.save_predictions(outfname_pred, predictions)
 
