@@ -115,8 +115,8 @@ def load_checkpoint(load_folder, opt,input_size,filename='checkpoint.pth.tar',im
     if optimizer_state is not None:
         optimizer.load_state_dict(optimizer_state)
 
-    print ("Our model:")
-    print (my_model)
+    #print ("Our model:")
+    #print (my_model)
 
     return my_model, optimizer, epoch, new_opt
 

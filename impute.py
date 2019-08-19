@@ -80,6 +80,7 @@ def impute(argv=None):
         print ("Getting the dataset...")
         dataset = datasets.get_dataset(opt,exp_dir)
         old_nb_patients = dataset.dataset.nb_patient
+        old_data_file = opt.data_file
         new_data_file = opt.new_data_file
         imputation_list = opt.imputation_list
         nb_shuffles = opt.nb_shuffles
@@ -88,6 +89,7 @@ def impute(argv=None):
         # Creating a model
         print ("Getting the model...")
         my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir,opt,dataset.dataset.input_size(),impute=True)
+        old_model_size = dataset.dataset.input_size()
         ### Making sure updates are only on the patient embedding layer
         #my_model.freeze_all()
         #optimizer = torch.optim.RMSprop(my_model.emb_2.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
@@ -113,7 +115,6 @@ def impute(argv=None):
                 print ("Re-getting the dataset...")
                 dataset = datasets.get_dataset(opt,exp_dir, masked = nb_genes)
                 new_embs = np.zeros((dataset.dataset.nb_patient,2))
-                
                 #monitoring and predictions
                 predictions=np.zeros((dataset.dataset.nb_patient,my_model.emb_1.weight.shape[0]))
                 indices_patients = np.arange(predictions.shape[0])
@@ -126,11 +127,14 @@ def impute(argv=None):
 
 
 
-                for t in range(epoch, opt.epoch):
-                    new_embs = my_model.emb_2.weight.cpu().data.numpy()[dataset.dataset.nb_patient,:]
+                for t in range(25):
 
-                    my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir,opt,dataset.dataset.input_size(),impute=True)
-                    my_model.emb_2.weight[:dataset.dataset.nb_patient,:] = Variable(torch.FloatTensor(new_embs),requires_grad=False).float() 
+                    my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir,opt,old_model_size,impute=True)
+                    temp_embs = my_model.emb_2.weight.cpu().data.numpy()
+                    temp_embs[:dataset.dataset.nb_patient,:] = new_embs
+
+                    my_model.emb_2.weight.data = my_model.emb_2.weight.data.copy_(torch.from_numpy(temp_embs))
+                    #my_model.emb_2.weight[:dataset.dataset.nb_patient,:] = Variable(torch.FloatTensor(new_embs),requires_grad=False).float() 
                     start_timer = time.time()
 
                     #if opt.save_error:
@@ -174,10 +178,11 @@ def impute(argv=None):
 
                         # Zero gradients, perform a backward pass, and update the weights.
                         optimizer.zero_grad()
-                        import pdb; pdb.set_trace()
+                        #import pdb; pdb.set_trace()
                         loss.backward()
                         optimizer.step()
 
+                        new_embs = my_model.emb_2.weight.cpu().data.numpy()[:dataset.dataset.nb_patient,:]
                         #my_model.generate_datapoint([0,0], opt.gpu_selection)
 
                 for i in range(0,xdata.shape[0],1000):
@@ -190,7 +195,7 @@ def impute(argv=None):
                     predictions[inputs.data.cpu().numpy()[:,1].astype('int32'),inputs.data.cpu().numpy()[:,0].astype('int32')] = y_pred.data.cpu().numpy()[:,0]
                 outfname_pred = f'shuffle_{shuffle}_{nb_genes}_genes_prediction.npy'
                 outfname_pred = os.path.join(new_save_dir,outfname_pred)
-                monitoring.save_predictions(outfname_pred, predictions)
+                np.save(outfname_pred, predictions)
 
 
             #      monitoring.dump_error_by_tissue(train_trace, dataset.dataset.data, outfname_t, exp_dir, dataset.dataset.data_type, dataset.dataset.nb_patient)
