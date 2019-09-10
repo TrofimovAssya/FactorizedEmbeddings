@@ -25,7 +25,7 @@ def build_parser():
     ### Dataset specific options
     parser.add_argument('--data-dir', default='./data/', help='The folder contaning the dataset.')
     parser.add_argument('--data-file', default='.', help='The data file with the dataset.')
-    parser.add_argument('--dataset', choices=['gene', 'domaingene', 'impute'], default='gene', help='Which dataset to use.')
+    parser.add_argument('--dataset', choices=['gene', 'domaingene', 'impute', 'fedomains'], default='gene', help='Which dataset to use.')
     parser.add_argument('--mask', type=int, default=0, help="percentage of masked values")
     parser.add_argument('--data-domain', default='.', help='Number of domains in the data for triple factemb')
     parser.add_argument('--transform', default=True,help='log10(exp+1)')
@@ -37,7 +37,7 @@ def build_parser():
     parser.add_argument('--warm_pca', default='.', help='Datafile to use as a PCA warm start for the sample embeddings')
 
     parser.add_argument('--weight-decay', default=1e-5, type=float, help='The size of the embeddings.')
-    parser.add_argument('--model', choices=['factor', 'triple'], default='factor', help='Which model to use.')
+    parser.add_argument('--model', choices=['factor', 'triple', 'multiple'], default='factor', help='Which model to use.')
     parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
     parser.add_argument('--gpu-selection', type=int, default=0, help="selectgpu")
@@ -183,9 +183,9 @@ def main(argv=None):
 #            print (f"I'll be making {(X.shape[0]*X.shape[1])**2} samples for a grid of {X.shape[0]} by {X.shape[1]} ")
 #            count = 0
 
-#            for ix,iy in zip(X.reshape((X.shape[0]*X.shape[1],)),Y.reshape((Y.shape[0]*Y.shape[1],))):
-#                if count%1000==0:
-#                    print(f'made {count} samples')
+            for ix,iy in zip(X.reshape((X.shape[0]*X.shape[1],)),Y.reshape((Y.shape[0]*Y.shape[1],))):
+                if count%1000==0:
+                    print(f'made {count} samples')
                 #import pdb; pdb.set_trace()
                 #np.save(os.path.join(exp_dir,'generated_patient{}'.format(count)),my_model.generate_datapoint([ix,iy],opt.gpu_selection).data.cpu().numpy())
 #                T.append(my_model.generate_datapoint([ix,iy],opt.gpu_selection).data.cpu().numpy())
