@@ -183,9 +183,9 @@ def main(argv=None):
 #            print (f"I'll be making {(X.shape[0]*X.shape[1])**2} samples for a grid of {X.shape[0]} by {X.shape[1]} ")
 #            count = 0
 
-            for ix,iy in zip(X.reshape((X.shape[0]*X.shape[1],)),Y.reshape((Y.shape[0]*Y.shape[1],))):
-                if count%1000==0:
-                    print(f'made {count} samples')
+            #for ix,iy in zip(X.reshape((X.shape[0]*X.shape[1],)),Y.reshape((Y.shape[0]*Y.shape[1],))):
+            #    if count%1000==0:
+            #        print(f'made {count} samples')
                 #import pdb; pdb.set_trace()
                 #np.save(os.path.join(exp_dir,'generated_patient{}'.format(count)),my_model.generate_datapoint([ix,iy],opt.gpu_selection).data.cpu().numpy())
 #                T.append(my_model.generate_datapoint([ix,iy],opt.gpu_selection).data.cpu().numpy())
