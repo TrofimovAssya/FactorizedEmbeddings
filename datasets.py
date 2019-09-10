@@ -290,7 +290,8 @@ def get_dataset(opt,exp_dir, masked=0):
     elif opt.dataset == 'impute':
         dataset = ImputeGeneDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform, masked = masked)
     elif opt.dataset == 'fedomains':
-        dataset = FEDomainsDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform, masked = masked)
+        dataset = FEDomainsDataset(root_dir=opt.data_dir, save_dir = exp_dir,data_file = opt.data_file, 
+            domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask)
     else:
         raise NotImplementedError()
 
