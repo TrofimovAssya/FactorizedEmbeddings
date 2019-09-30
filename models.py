@@ -108,6 +108,59 @@ class FactorizedMLP(nn.Module):
             layer.bias.requires_grad = True
         self.emb_1.weight.requires_grad = True
 
+class ChoyEmbedding(nn.Module):
+
+    def __init__(self, emb_size=50, inputs_size=inputs_size):
+        super(ChoyEmbedding, self).__init__()
+
+        self.emb_size = emb_size
+        self.inputs_size = inputs_size
+
+
+        # The embedding
+        assert len(inputs_size) == 2
+
+        self.emb_1 = nn.Embedding(inputs_size[0], emb_size)
+        self.emb_2 = nn.Embedding(inputs_size[1], emb_size)
+
+        
+    def get_embeddings(self, x):
+
+        gene, patient = x[:, 0], x[:, 1]
+        # Embedding.
+        gene = self.emb_1(gene.long())
+        patient = self.emb_2(patient.long())
+
+        return gene, patient
+
+    def forward(self, x):
+
+        # Get the embeddings
+        emb_1, emb_2 = self.get_embeddings(x)
+
+        # Forward pass.
+        mlp_output = torch.mm(emb_1, emb_2)
+
+        
+        return mlp_output
+
+
+    def generate_datapoint(self, e, gpu):
+        #getting a datapoint embedding coordinate
+        emb_1 = self.emb_1.weight.cpu().data.numpy()
+        emb_2 = (np.ones(emb_1.shape[0]*2).reshape((emb_1.shape[0],2)))*e
+        emb_1 = torch.FloatTensor(emb_1)
+        emb_2 = torch.FloatTensor(emb_2)
+        emb_1 = Variable(emb_1, requires_grad=False).float()
+        emb_2 = Variable(emb_2, requires_grad=False).float()
+        #if gpu:
+        emb_1 = emb_1.cuda(gpu)
+        emb_2 = emb_2.cuda(gpu)
+        
+        mlp_output = torch.mm(emb_1, emb_2)
+        return mlp_output
+
+
 class MultipleFactorizedMLP(nn.Module):
 
     def __init__(self, layers_size, inputs_size, emb_size=2):
@@ -282,6 +335,11 @@ def get_model(opt, inputs_size, model_state=None):
     elif opt.model == 'multiple':
         model_class = MultipleFactorizedMLP
         model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size)
+
+    elif opt.model == 'choybenchmark':
+        model_class = ChoyEmbedding
+        model = model_class(emb_size=50,inputs_size=inputs_size)
+
     else:
         raise NotImplementedError()
 
