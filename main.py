@@ -27,6 +27,7 @@ def build_parser():
     parser.add_argument('--data-file', default='.', help='The data file with the dataset.')
     parser.add_argument('--dataset', choices=['gene', 'domaingene', 'impute', 'fedomains'], default='gene', help='Which dataset to use.')
     parser.add_argument('--mask', type=int, default=0, help="percentage of masked values")
+    parser.add_argument('--missing', type=int, default=0, help="number of held out combinations for FE domains")
     parser.add_argument('--data-domain', default='.', help='Number of domains in the data for triple factemb')
     parser.add_argument('--transform', default=True,help='log10(exp+1)')
     
@@ -91,7 +92,6 @@ def main(argv=None):
 
     # The training.
     print ("Start training.")
-    import pdb;pdb.set_trace()
     #monitoring and predictions
     predictions =np.zeros((dataset.dataset.nb_patient,dataset.dataset.nb_gene))
     indices_patients = np.arange(dataset.dataset.nb_patient)
@@ -129,12 +129,8 @@ def main(argv=None):
                 batch_inputs = mini[0].numpy()
                 predicted_values = y_pred.data.cpu().numpy()
                 train_trace[batch_inputs[:,0],batch_inputs[:,1]] = predicted_values[:,0]
-            #import pdb; pdb.set_trace()
             targets = torch.reshape(targets,(targets.shape[0],1))
             # Compute and print loss
-
-
-
 
             loss = criterion(y_pred, targets)
             if no_b % 5 == 0:
@@ -143,7 +139,6 @@ def main(argv=None):
                 # Saving the emb
                 np.save(os.path.join(exp_dir, 'pixel_epoch_{}'.format(t)),my_model.emb_1.weight.cpu().data.numpy() )
                 np.save(os.path.join(exp_dir,'digit_epoch_{}'.format(t)),my_model.emb_2.weight.cpu().data.numpy())
-
 
             # Zero gradients, perform a backward pass, and update the weights.
             optimizer.zero_grad()

@@ -194,9 +194,9 @@ class MultipleFactorizedMLP(nn.Module):
         # The embedding
         assert len(inputs_size) == 3
 
-        self.emb_1 = nn.Embedding(inputs_size[1], emb_size)
-        self.emb_2 = nn.Embedding(inputs_size[0], emb_size)
-        self.emb_3 = nn.Embedding(inputs_size[2], emb_size)
+        self.emb_1 = nn.Embedding(int(inputs_size[2]), emb_size)
+        self.emb_2 = nn.Embedding(int(inputs_size[0]), emb_size)
+        self.emb_3 = nn.Embedding(int(inputs_size[1]), emb_size)
 
         # The list of layers.
         layers = []

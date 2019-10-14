@@ -144,8 +144,7 @@ class FEDomainsDataset(Dataset):
 
     """
 
-    def __init__(self,root_dir='.',save_dir='.', data_file='data.npy', domain_file = 'domain.npy', nb_factors = 2, transform=True, masked = 0):
-
+    def __init__(self,root_dir='.',save_dir='.', data_file='data.npy', domain_file = 'domain.npy', nb_factors = 2, transform=True, masked = 0, missing = 0):
 
         data_path = os.path.join(root_dir, data_file)
         domain_path = os.path.join(root_dir, domain_file)
@@ -153,6 +152,7 @@ class FEDomainsDataset(Dataset):
         self.data = np.load(data_path)
         self.domain = np.load(domain_path)
         self.masked = masked
+        self.missing = missing
         self.nb_factors = nb_factors
 
         self.nb_patient = len(set(self.domain[:,0]))
@@ -165,12 +165,21 @@ class FEDomainsDataset(Dataset):
 
         self.root_dir = root_dir
         self.transform = transform
+        if missing>0:
+            set_aside = np.random.permutation(np.arange(self.data.shape[0]))[:missing]
+            np.save(f'{save_dir}/indices_missing.npy',set_aside)
+            np.save(f'{save_dir}/set_aside.npy', self.data[set_aside,:])
+            keep = np.logical_not([i in set_aside for i in range(self.data.shape[0])])
+            self.data = self.data[keep,:]
+            self.domain = self.domain[keep,:]
+
+
         self.X_indices, self.Y_data = self.dataset_make(self.data,log_transform=True)
 
         self.X_data = np.zeros((self.Y_data.shape[0],3))
-        self.X_data[:,0] = self.domain[self.X_indixes[:,1],0]
-        self.X_data[:,1] = self.domain[self.X_indixes[:,1],1]
-        self.X_data[:,2] = self.X_indices[:,0]
+        self.X_data[:,2] = self.domain[self.X_indices[:,1],0]
+        self.X_data[:,1] = self.domain[self.X_indices[:,1],1]
+        self.X_data[:,0] = self.X_indices[:,0]
         
         ### masking the data if needed
         permutation = np.random.permutation(np.arange(self.X_data.shape[0]))
@@ -289,9 +298,9 @@ def get_dataset(opt,exp_dir, masked=0):
             domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask)
     elif opt.dataset == 'impute':
         dataset = ImputeGeneDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform, masked = masked)
-    elif opt.dataset == 'fedomains': 
-        dataset = FEDomainsDataset(root_dir=opt.data_dir, save_dir = exp_dir,data_file = opt.data_file, 
-            domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask)
+    elif opt.dataset == 'fedomains':
+        dataset = FEDomainsDataset(root_dir=opt.data_dir, save_dir = exp_dir,data_file = opt.data_file, domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask, 
+                                   missing = opt.missing)
     else:
         raise NotImplementedError()
 
