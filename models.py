@@ -110,7 +110,7 @@ class FactorizedMLP(nn.Module):
 
 class ChoyEmbedding(nn.Module):
 
-    def __init__(self, emb_size=50, inputs_size=inputs_size):
+    def __init__(self, emb_size, inputs_size):
         super(ChoyEmbedding, self).__init__()
 
         self.emb_size = emb_size
@@ -122,6 +122,8 @@ class ChoyEmbedding(nn.Module):
 
         self.emb_1 = nn.Embedding(inputs_size[0], emb_size)
         self.emb_2 = nn.Embedding(inputs_size[1], emb_size)
+        self.emb_1_bias = nn.Embedding(inputs_size[0],1)
+        self.emb_2_bias = nn.Embedding(inputs_size[1],1)
 
         
     def get_embeddings(self, x):
@@ -133,15 +135,30 @@ class ChoyEmbedding(nn.Module):
 
         return gene, patient
 
+    def get_bias_embeddings(self, x):
+
+        gene, patient = x[:,0], x[:,1]
+        gene = self.emb_1_bias(gene.long())
+        patient = self.emb_2_bias(patient.long())
+
+        return gene, patient
+
     def forward(self, x):
 
         # Get the embeddings
+        #import pdb; pdb.set_trace()
         emb_1, emb_2 = self.get_embeddings(x)
+        #import pdb; pdb.set_trace()
+        bias_1, bias_2 = self.get_bias_embeddings(x)
+        b = int(emb_1.shape[0])
+        m = int(50)
+        t1 = emb_1.view(b,1,m)
+        t2 = emb_2.view(b,m,1)
 
         # Forward pass.
-        mlp_output = torch.mm(emb_1, emb_2)
-
-        
+        mlp_output = torch.bmm(t1, t2).squeeze()
+        mlp_output += bias_1.squeeze()
+        mlp_output += bias_2.squeeze()
         return mlp_output
 
 
@@ -347,3 +364,4 @@ def get_model(opt, inputs_size, model_state=None):
         model.load_state_dict(model_state)
 
     return model
+

@@ -37,10 +37,10 @@ def build_parser():
     parser.add_argument('--warm_pca', default='.', help='Datafile to use as a PCA warm start for the sample embeddings')
 
     parser.add_argument('--weight-decay', default=1e-5, type=float, help='The size of the embeddings.')
-    parser.add_argument('--model', choices=['factor', 'triple', 'multiple'], default='factor', help='Which model to use.')
+    parser.add_argument('--model', choices=['factor', 'triple','multiple','choybenchmark'], default='factor', help='Which model to use.')
     parser.add_argument('--cpu', action='store_true', help='If we want to run on cpu.') # TODO: should probably be cpu instead.
     parser.add_argument('--name', type=str, default=None, help="If we want to add a random str to the folder.")
-    parser.add_argument('--gpu-selection', type=int, default=0, help="selectgpu")
+    parser.add_argument('--gpu-selection', type=int, default=1, help="selectgpu")
 
 
     # Monitoring options
@@ -91,6 +91,7 @@ def main(argv=None):
 
     # The training.
     print ("Start training.")
+    import pdb;pdb.set_trace()
     #monitoring and predictions
     predictions =np.zeros((dataset.dataset.nb_patient,dataset.dataset.nb_gene))
     indices_patients = np.arange(dataset.dataset.nb_patient)
