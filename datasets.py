@@ -139,9 +139,12 @@ class DomainGeneDataset(Dataset):
 
 
 class FEDomainsDataset(Dataset):
-    """FE domains dataset"""
+    """FE domains dataset
+    This dataset creates a factorized embedding for each variation to factor out.
 
-    def __init__(self,root_dir='.',save_dir='.',data_file='data.npy', domain_file = 'domain.npy', transform=True, masked = 0):
+    """
+
+    def __init__(self,root_dir='.',save_dir='.', data_file='data.npy', domain_file = 'domain.npy', nb_factors = 2, transform=True, masked = 0):
 
 
         data_path = os.path.join(root_dir, data_file)
@@ -150,24 +153,24 @@ class FEDomainsDataset(Dataset):
         self.data = np.load(data_path)
         self.domain = np.load(domain_path)
         self.masked = masked
+        self.nb_factors = nb_factors
 
         self.nb_patient = len(set(self.domain[:,0]))
         self.nb_gene = self.data.shape[1]
-        self.nb_domain = len(set(self.domain[:,1]))
+        
+
         print (self.nb_gene)
         print (self.nb_patient)
-        print (self.nb_domain)
         self.nb_tissue = 1
 
         self.root_dir = root_dir
         self.transform = transform
         self.X_indices, self.Y_data = self.dataset_make(self.data,log_transform=True)
-        ### TODO: figure out how to control the transform from main arguments
 
         self.X_data = np.zeros((self.Y_data.shape[0],3))
-        self.X_data[:,0] = self.domain[self.X_indices[:,1],0]
-        self.X_data[:,1] = self.X_indices[:,0]
-        self.X_data[:,2] = self.domain[self.X_indices[:,1],1]
+        self.X_data[:,0] = self.domain[self.X_indixes[:,1],0]
+        self.X_data[:,1] = self.domain[self.X_indixes[:,1],1]
+        self.X_data[:,2] = self.X_indices[:,0]
         
         ### masking the data if needed
         permutation = np.random.permutation(np.arange(self.X_data.shape[0]))
@@ -205,7 +208,8 @@ class FEDomainsDataset(Dataset):
         return X_data, Y_data
 
     def input_size(self):
-        return self.nb_gene, self.nb_patient, self.nb_domain
+
+        return np.max(self.X_data[:,2])+1, np.max(self.X_data[:,1])+1, np.max(self.X_data[:,0])+1
 
     def extra_info(self):
         info = OrderedDict()
@@ -285,7 +289,7 @@ def get_dataset(opt,exp_dir, masked=0):
             domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask)
     elif opt.dataset == 'impute':
         dataset = ImputeGeneDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform, masked = masked)
-    elif opt.dataset == 'fedomains':
+    elif opt.dataset == 'fedomains': 
         dataset = FEDomainsDataset(root_dir=opt.data_dir, save_dir = exp_dir,data_file = opt.data_file, 
             domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask)
     else:
