@@ -162,7 +162,10 @@ class ChoyEmbedding(nn.Module):
 
 
 class MultipleFactorizedMLP(nn.Module):
+    '''
+    This model is used to generate a E dimensional space for each variable. 
 
+    '''
     def __init__(self, layers_size, inputs_size, emb_size=2):
         super(MultipleFactorizedMLP, self).__init__()
 
@@ -326,13 +329,14 @@ def get_model(opt, inputs_size, model_state=None):
 
     if opt.model == 'factor':
         model_class = FactorizedMLP
-        model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size, data_dir = opt.data_dir, set_gene_emb = opt.set_gene_emb, warm_pca = opt.warm_pca)
+        model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size, 
+            data_dir = opt.data_dir, set_gene_emb = opt.set_gene_emb, warm_pca = opt.warm_pca)
 
     elif opt.model == 'triple':
         model_class = TripleFactorizedMLP
         model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size)
 
-    elif opt.model == 'multiple':
+    elif opt.model == 'multiple': 
         model_class = MultipleFactorizedMLP
         model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size)
 
