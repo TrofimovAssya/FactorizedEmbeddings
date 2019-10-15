@@ -364,8 +364,8 @@ def get_model(opt, inputs_size, additional_info, model_state=None):
 
     elif opt.model == 'choybenchmark':
         model_class = ChoyEmbedding
-        import pdb; pdb.set_trace()
-
+        rang = additional_info[0]
+        minimum = additional_info[1]
         model = model_class(emb_size=50,inputs_size=inputs_size, rang=rang, minimum = minimum)
 
     else:
