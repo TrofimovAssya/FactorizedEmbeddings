@@ -59,7 +59,7 @@ def save_checkpoint(model, optimizer, epoch, opt, exp_dir, filename='checkpoint.
     filename = os.path.join(exp_dir, filename)
     torch.save(state, filename)
 
-def load_checkpoint(load_folder, opt,input_size,filename='checkpoint.pth.tar',impute=False):
+def load_checkpoint(load_folder, opt,input_size,filename='checkpoint.pth.tar',impute=False, dataset = '.'):
 
     # Model
     model_state = None
@@ -100,7 +100,7 @@ def load_checkpoint(load_folder, opt,input_size,filename='checkpoint.pth.tar',im
             print(f"=> no checkpoint found at '{filename}'")
 
     # Get the network
-    my_model = models.get_model(new_opt, input_size, model_state)
+    my_model = models.get_model(new_opt, input_size, model_state, dataset)
 
     ### Moving the model to GPU if it was on the GPU according to the opts.
     if not opt.cpu:
