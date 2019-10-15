@@ -81,7 +81,8 @@ def main(argv=None):
 
     # Creating a model
     print ("Getting the model...")
-    my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir, opt, dataset.dataset.input_size(), )
+
+    my_model, optimizer, epoch, opt = monitoring.load_checkpoint(exp_dir, opt, dataset.dataset.input_size())
 
     # Training optimizer and stuff
     criterion = torch.nn.MSELoss()

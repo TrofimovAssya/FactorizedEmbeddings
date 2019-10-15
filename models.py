@@ -89,7 +89,7 @@ class FactorizedMLP(nn.Module):
         mlp_input = torch.cat([emb_1, emb_2],1)
         for layer in self.mlp_layers:
             mlp_input = layer(mlp_input)
-            mlp_input = F.tanh(mlp_input)
+            mlp_input = torch.nn.tanh(mlp_input)
         mlp_output = self.last_layer(mlp_input)
         return mlp_output
 
@@ -110,11 +110,13 @@ class FactorizedMLP(nn.Module):
 
 class ChoyEmbedding(nn.Module):
 
-    def __init__(self, emb_size, inputs_size):
+    def __init__(self, emb_size, inputs_size, rang, minimum):
         super(ChoyEmbedding, self).__init__()
 
         self.emb_size = emb_size
         self.inputs_size = inputs_size
+        self.range = rang
+        self.minimum = minimum
 
 
         # The embedding
@@ -159,6 +161,9 @@ class ChoyEmbedding(nn.Module):
         mlp_output = torch.bmm(t1, t2).squeeze()
         mlp_output += bias_1.squeeze()
         mlp_output += bias_2.squeeze()
+        mlp_output = nn.sigmoid(mlp_output)
+        mlp_output *= self.range
+        mlp_output += self.minimum
         return mlp_output
 
 
@@ -359,7 +364,8 @@ def get_model(opt, inputs_size, model_state=None):
 
     elif opt.model == 'choybenchmark':
         model_class = ChoyEmbedding
-        model = model_class(emb_size=50,inputs_size=inputs_size)
+        import pdb; pdb.set_trace()
+        model = model_class(emb_size=50,inputs_size=inputs_size, rang, minimum)
 
     else:
         raise NotImplementedError()
