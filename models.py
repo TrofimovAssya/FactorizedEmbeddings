@@ -347,7 +347,7 @@ class TripleFactorizedMLP(nn.Module):
         mlp_output = self.last_layer(mlp_input)
         return mlp_output
 
-def get_model(opt, inputs_size, model_state=None, dataset = '.'):
+def get_model(opt, inputs_size, additional_info, model_state=None):
 
     if opt.model == 'factor':
         model_class = FactorizedMLP
