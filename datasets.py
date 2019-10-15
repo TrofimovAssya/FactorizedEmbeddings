@@ -61,6 +61,10 @@ class GeneDataset(Dataset):
     def input_size(self):
         return self.nb_gene, self.nb_patient
 
+    def additional_info(self):
+        return np.max(self.Y_data)-np.min(self.Y_data), np.min(self.Y_data)
+
+
     def extra_info(self):
         info = OrderedDict()
         return info
@@ -132,6 +136,10 @@ class DomainGeneDataset(Dataset):
 
     def input_size(self):
         return self.nb_gene, self.nb_patient, self.nb_domain
+        
+    def additional_info(self):
+        return np.max(self.Y_data)-np.min(self.Y_data), np.min(self.Y_data)
+
 
     def extra_info(self):
         info = OrderedDict()
@@ -220,6 +228,9 @@ class FEDomainsDataset(Dataset):
 
         return np.max(self.X_data[:,2])+1, np.max(self.X_data[:,1])+1, np.max(self.X_data[:,0])+1
 
+    def additional_info(self):
+        return np.max(self.Y_data)-np.min(self.Y_data), np.min(self.Y_data)
+
     def extra_info(self):
         info = OrderedDict()
         return info
@@ -281,6 +292,10 @@ class ImputeGeneDataset(Dataset):
 
     def input_size(self):
         return self.nb_gene, self.nb_patient
+
+    def additional_info(self):
+        return np.max(self.Y_data)-np.min(self.Y_data), np.min(self.Y_data)
+
 
     def extra_info(self):
         info = OrderedDict()
