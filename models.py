@@ -7,7 +7,7 @@ from sklearn.decomposition import PCA
 
 class FactorizedMLP(nn.Module):
 
-    def __init__(self, layers_size, inputs_size, emb_size=2, data_dir = 'data/', set_gene_emb = '.', warm_pca = '.'):
+    def __init__(self, layers_size, inputs_size, rang, minimum, emb_size=2, data_dir = 'data/', set_gene_emb = '.', warm_pca = '.'):
         super(FactorizedMLP, self).__init__()
 
         self.layers_size = layers_size
@@ -64,8 +64,15 @@ class FactorizedMLP(nn.Module):
             mlp_input = F.tanh(mlp_input)
 
         mlp_output = self.last_layer(mlp_input)
+        
+        mlp_output = torch.sigmoid(mlp_output)
+        mlp_output = mlp_output * self.rang
+        mlp_output = mlp_output + self.minimum
+        mlp_output = mlp_output.unsqueeze(1)
 
         return mlp_output
+
+
 
     def start_with_PCA(self, datadir = 'data/',datafile = '.'):
         data = np.load(''.join([datadir, datafile]))
@@ -349,10 +356,13 @@ class TripleFactorizedMLP(nn.Module):
         return mlp_output
 
 def get_model(opt, inputs_size, additional_info, model_state=None):
+    rang = additional_info[0]
+    minimum = additional_info[1]
 
     if opt.model == 'factor':
         model_class = FactorizedMLP
-        model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size, 
+        model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size,
+            rang = rang, minimum = minimum, 
             data_dir = opt.data_dir, set_gene_emb = opt.set_gene_emb, warm_pca = opt.warm_pca)
 
     elif opt.model == 'triple':
@@ -365,8 +375,7 @@ def get_model(opt, inputs_size, additional_info, model_state=None):
 
     elif opt.model == 'choybenchmark':
         model_class = ChoyEmbedding
-        rang = additional_info[0]
-        minimum = additional_info[1]
+
         model = model_class(emb_size=50,inputs_size=inputs_size, rang=rang, minimum = minimum)
 
     else:
