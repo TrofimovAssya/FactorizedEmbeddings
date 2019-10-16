@@ -117,7 +117,6 @@ def main(argv=None):
 
             inputs = Variable(inputs, requires_grad=False).float()
             targets = Variable(targets, requires_grad=False).float()
-            import pdb; pdb.set_trace()
 
             if not opt.cpu:
                 inputs = inputs.cuda(opt.gpu_selection)
