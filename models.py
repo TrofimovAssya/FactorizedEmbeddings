@@ -164,6 +164,7 @@ class ChoyEmbedding(nn.Module):
         mlp_output = torch.sigmoid(mlp_output)
         mlp_output = mlp_output * self.rang
         mlp_output = mlp_output + self.minimum
+        mlp_output = mlp_output.unsqueeze(1)
         return mlp_output
 
 
