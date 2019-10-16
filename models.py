@@ -13,6 +13,8 @@ class FactorizedMLP(nn.Module):
         self.layers_size = layers_size
         self.emb_size = emb_size
         self.inputs_size = inputs_size
+        self.rang = rang
+        self.minimum = minimum
 
 
         # The embedding
@@ -64,7 +66,7 @@ class FactorizedMLP(nn.Module):
             mlp_input = F.tanh(mlp_input)
 
         mlp_output = self.last_layer(mlp_input)
-        
+
         mlp_output = torch.sigmoid(mlp_output)
         mlp_output = mlp_output * self.rang
         mlp_output = mlp_output + self.minimum
