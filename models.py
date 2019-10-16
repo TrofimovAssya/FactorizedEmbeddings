@@ -115,7 +115,7 @@ class ChoyEmbedding(nn.Module):
 
         self.emb_size = emb_size
         self.inputs_size = inputs_size
-        self.range = rang
+        self.rang = rang
         self.minimum = minimum
 
 
@@ -159,11 +159,11 @@ class ChoyEmbedding(nn.Module):
 
         # Forward pass.
         mlp_output = torch.bmm(t1, t2).squeeze()
-        mlp_output += bias_1.squeeze()
-        mlp_output += bias_2.squeeze()
-        mlp_output = torch.nn.Sigmoid(mlp_output)
-        mlp_output *= self.range
-        mlp_output += self.minimum
+        mlp_output = mlp_output + bias_1.squeeze()
+        mlp_output = mlp_output + bias_2.squeeze()
+        mlp_output = torch.sigmoid(mlp_output)
+        mlp_output = mlp_output * self.rang
+        mlp_output = mlp_output + self.minimum
         return mlp_output
 
 
