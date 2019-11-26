@@ -69,6 +69,84 @@ class GeneDataset(Dataset):
         info = OrderedDict()
         return info
 
+class DoubleDataset(Dataset):
+    """Gene expression dataset"""
+
+    def __init__(self,root_dir='.',save_dir='.',data_file1='data1.npy', data_file2='data2.npy', 
+        patient_list1 = 'patientlist1.csv', patient_list2 = 'patientlist2.csv', transform=None, masked = 0):
+
+        # The dataset should be: 3 embeddings + 2 targets.
+        # so for example gene expression and protein expression would be:
+        # (geneID, sampleID, proteinID), (genexp, proteinexp)
+
+        # Load the dataset
+        data_path1 = os.path.join(root_dir, data_file1)
+        data_path2 = os.path.join(root_dir, data_file2)
+        
+        self.data1 = np.load(data_path1)
+        self.data2 = np.load(data_path2)
+
+        patient_list1 = os.path.join(root_dir, patient_list1)
+        patient_list2 = os.path.join(root_dir, patient_list2)
+        
+        self.patient_list1 = pd.read_csv(patient_list1, header=None)
+        self.patient_list2 = pd.read_csv(patient_list2, header=None)
+
+        self.masked = masked
+
+        self.nb_gene = self.data1.shape[1]
+        self.nb_protein = self.data2.shape[1]
+
+        print (self.nb_gene)
+        print (self.nb_patient)
+        print (self.nb_protein)
+        self.nb_tissue = 1
+
+        self.root_dir = root_dir
+        self.transform = transform # heh
+
+        self.X_data1, self.Y_data1 = self.dataset_make(self.data1,log_transform=True)
+        self.X_data2, self.Y_data2 = self.dataset_make(self.data2,log_transform=False)
+
+        
+
+        
+
+    def __len__(self):
+        return len(self.X_data)
+
+    def __getitem__(self, idx):
+
+        sample = self.X_data[idx]
+        label = self.Y_data[idx]
+
+        sample = [sample, label]
+
+        return sample
+
+    def dataset_make(self, gene_exp, log_transform=False):
+        indices_p1 = np.arange(gene_exp.shape[0])
+        indices_g = np.arange(gene_exp.shape[1])
+        X_data = np.transpose([np.tile(indices_g, len(indices_p1)), np.repeat(indices_p1, len(indices_g))])
+        Y_data = gene_exp[X_data[:, 1], X_data[:, 0]]
+
+        print (f"Total number of examples: {Y_data.shape} ")
+
+        if log_transform:
+            Y_data = np.log10(Y_data + 1)
+        return X_data, Y_data
+
+    def input_size(self):
+        return self.nb_gene, self.nb_patient
+
+    def additional_info(self):
+        return np.max(self.Y_data)-np.min(self.Y_data), np.min(self.Y_data)
+
+
+    def extra_info(self):
+        info = OrderedDict()
+        return info
+
 
 class DomainGeneDataset(Dataset):
     """Gene expression dataset"""
@@ -316,6 +394,8 @@ def get_dataset(opt,exp_dir, masked=0):
     elif opt.dataset == 'fedomains':
         dataset = FEDomainsDataset(root_dir=opt.data_dir, save_dir = exp_dir,data_file = opt.data_file, domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask, 
                                    missing = opt.missing)
+    elif opt.dataset == 'doubleoutput':
+        dataset = DoubleDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform, masked = opt.mask)
     else:
         raise NotImplementedError()
 

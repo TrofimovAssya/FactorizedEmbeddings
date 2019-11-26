@@ -357,6 +357,91 @@ class TripleFactorizedMLP(nn.Module):
         mlp_output = self.last_layer(mlp_input)
         return mlp_output
 
+
+class DoubleOutputMLP(nn.Module):
+
+    def __init__(self, layers_size, inputs_size, emb_size=2):
+        super(TripleFactorizedMLP, self).__init__()
+
+        self.layers_size = layers_size
+        self.emb_size = emb_size
+        self.inputs_size = inputs_size
+
+
+        # The embedding
+        assert len(inputs_size) == 3
+
+        self.emb_1 = nn.Embedding(inputs_size[0], emb_size)
+        #the shared embeddings is the emb_2 middle one
+        self.emb_2 = nn.Embedding(inputs_size[1], emb_size) 
+        self.emb_3 = nn.Embedding(inputs_size[2], emb_size)
+
+        # The list of layers for the MLP1.
+        layers1 = []
+        dim = [emb_size * 2] + layers_size # Adding the emb size.
+        for size_in, size_out in zip(dim[:-1], dim[1:]):
+            layer = nn.Linear(size_in, size_out)
+            layers1.append(layer)
+
+        self.mlp1_layers = nn.ModuleList(layers1)
+
+        # Last layer
+        self.last1_layer = nn.Linear(dim[-1], 1)
+
+
+        # The list of layers for the MLP2.
+        layers2 = []
+        dim = [emb_size * 2] + layers_size # Adding the emb size.
+        for size_in, size_out in zip(dim[:-1], dim[1:]):
+            layer = nn.Linear(size_in, size_out)
+            layers2.append(layer)
+
+        self.mlp2_layers = nn.ModuleList(layers2)
+
+        # Last layer
+        self.last2_layer = nn.Linear(dim[-1], 1)
+
+
+    def get_embeddings(self, x):
+
+        gene, patient, protein = x[:, 0], x[:, 1], x[:, 2]
+        # Embedding.
+        gene = self.emb_1(gene.long())
+        patient = self.emb_2(patient.long())
+        protein = self.emb_3(protein.long())
+
+        return gene, patient, domain
+
+    def forward(self, x):
+
+        # Get the embeddings
+        emb_1, emb_2, emb_3 = self.get_embeddings(x)
+
+        # Forward pass.
+        mlp1_input = torch.cat([emb_1, emb_2], 1)
+        mlp2_input = torch.cat([emb_2, emb_3], 1)
+
+        for layer in self.mlp1_layers:
+            mlp1_input = layer(mlp1_input)
+            mlp1_input = F.tanh(mlp1_input)
+
+        mlp1_output = self.last1_layer(mlp1_input)
+
+        for layer in self.mlp2_layers:
+            mlp2_input = layer(mlp2_input)
+            mlp2_input = F.tanh(mlp2_input)
+
+        mlp2_output = self.last2_layer(mlp2_input)
+
+        return mlp_output1, mlp_output2
+
+    def generate_datapoint(self, e, d, gpu):
+        ### TODO
+        #getting a datapoint embedding coordinate
+        pass
+
+
+
 def get_model(opt, inputs_size, additional_info, model_state=None):
     rang = additional_info[0]
     minimum = additional_info[1]
@@ -375,10 +460,15 @@ def get_model(opt, inputs_size, additional_info, model_state=None):
         model_class = MultipleFactorizedMLP
         model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size)
 
+    elif opt.model == 'doubleoutput': 
+        model_class = DoubleOutputMLP
+        model = model_class(layers_size=opt.layers_size,emb_size=opt.emb_size,inputs_size=inputs_size)
+
     elif opt.model == 'choybenchmark':
         model_class = ChoyEmbedding
 
         model = model_class(emb_size=50,inputs_size=inputs_size, rang=rang, minimum = minimum)
+
 
     else:
         raise NotImplementedError()
