@@ -404,22 +404,23 @@ class DoubleOutputMLP(nn.Module):
 
     def get_embeddings(self, x):
 
-        gene, patient, protein = x[:, 0], x[:, 1], x[:, 2]
+        gene, patient1, protein, patient2 = x[:, 0], x[:, 1], x[:, 2], x[:,3]
         # Embedding.
         gene = self.emb_1(gene.long())
-        patient = self.emb_2(patient.long())
+        patient1 = self.emb_2(patient1.long())
         protein = self.emb_3(protein.long())
+        patient2 = self.emb_2(patient2.long())
 
-        return gene, patient, domain
+        return gene, patient1, protein, patient2
 
     def forward(self, x):
 
         # Get the embeddings
-        emb_1, emb_2, emb_3 = self.get_embeddings(x)
+        emb_1, emb_2, emb_3, emb_4 = self.get_embeddings(x)
 
         # Forward pass.
         mlp1_input = torch.cat([emb_1, emb_2], 1)
-        mlp2_input = torch.cat([emb_2, emb_3], 1)
+        mlp2_input = torch.cat([emb_3, emb_4], 1)
 
         for layer in self.mlp1_layers:
             mlp1_input = layer(mlp1_input)
@@ -435,7 +436,12 @@ class DoubleOutputMLP(nn.Module):
 
         return mlp_output1, mlp_output2
 
-    def generate_datapoint(self, e, d, gpu):
+    def generate_datapoint_protein(self, e, d, gpu):
+        ### TODO
+        #getting a datapoint embedding coordinate
+        pass
+
+    def generate_datapoint_gene(self, e, d, gpu):
         ### TODO
         #getting a datapoint embedding coordinate
         pass

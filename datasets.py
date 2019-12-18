@@ -72,65 +72,74 @@ class GeneDataset(Dataset):
 class DoubleDataset(Dataset):
     """Gene expression dataset"""
 
-    def __init__(self,root_dir='.',save_dir='.',data_file1='data1.npy', data_file2='data2.npy', 
+    def __init__(self,root_dir='.',save_dir='.',data_file1_x='data1.npy', data_file2='data2.npy', 
         patient_list1 = 'patientlist1.csv', patient_list2 = 'patientlist2.csv', transform=None, masked = 0):
 
+
+        self.X_data1 = os.path.join(root_dir, 'color_rectum_transcriptome_X_data.npy')
+        self.Y_data1 = os.path.join(root_dir, 'color_rectum_transcriptome_Y_data.npy')
+        self.X_data2 = os.path.join(root_dir, 'color_rectum_proteome_X_data2.npy')
+        self.Y_data2 = os.path.join(root_dir, 'color_rectum_proteome_P_data.npy')
         # The dataset should be: 3 embeddings + 2 targets.
         # so for example gene expression and protein expression would be:
         # (geneID, sampleID, proteinID), (genexp, proteinexp)
 
         # Load the dataset
-        data_path1 = os.path.join(root_dir, data_file1)
-        data_path2 = os.path.join(root_dir, data_file2)
+        #data_path1 = os.path.join(root_dir, data_file1)
+        #data_path2 = os.path.join(root_dir, data_file2)
         
-        self.data1 = np.load(data_path1)
-        self.data2 = np.load(data_path2)
+        #self.data1 = np.load(data_path1)
+        #self.data2 = np.load(data_path2)
 
-        patient_list1 = os.path.join(root_dir, patient_list1)
-        patient_list2 = os.path.join(root_dir, patient_list2)
+        #patient_list1 = os.path.join(root_dir, patient_list1)
+        #patient_list2 = os.path.join(root_dir, patient_list2)
         
-        self.patient_list1 = pd.read_csv(patient_list1, header=None)
-        self.patient_list1 = self.patient_list1[0]
+        #self.patient_list1 = pd.read_csv(patient_list1, header=None)
+        #self.patient_list1 = self.patient_list1[0]
 
-        self.patient_list2 = pd.read_csv(patient_list2, header=None)
-        self.patient_list2 = self.patient_list2[0]
+        #self.patient_list2 = pd.read_csv(patient_list2, header=None)
+        #self.patient_list2 = self.patient_list2[0]
 
-        self.masked = masked
+        #self.masked = masked
 
-        self.nb_gene = self.data1.shape[1]
-        self.nb_protein = self.data2.shape[1]
+        #self.nb_gene = self.data1.shape[1]
+        #self.nb_protein = self.data2.shape[1]
 
-        print (self.nb_gene)
-        print (self.nb_patient)
-        print (self.nb_protein)
+        #print (self.nb_gene)
+        #print (self.nb_patient)
+        #print (self.nb_protein)
 
-        self.nb_tissue = 1
+        #self.nb_tissue = 1
 
-        self.root_dir = root_dir
-        self.transform = transform # heh
+        #self.root_dir = root_dir
+        #self.transform = transform # heh
 
-        self.X_data1, self.Y_data1 = self.dataset_make(self.data1,log_transform=True)
-        self.X_data2, self.Y_data2 = self.dataset_make(self.data2,log_transform=False)
+        #self.X_data1, self.Y_data1 = self.dataset_make(self.data1,log_transform=True)
+        #self.X_data2, self.Y_data2 = self.dataset_make(self.data2,log_transform=False)
 
-        self.all_patient_list = list(set(list(self.patient_list1)+list(self.patient_list2)))
-        temp1 = [self.patient_list1[i] for i in self.X_data1]
-        temp1 = [self.all_patient_list.index(i) for i in temp1]
-        self.X_data1 = np.array(temp1)
+        #self.all_patient_list = list(set(list(self.patient_list1)+list(self.patient_list2)))
+        #temp1 = [self.patient_list1[i] for i in self.X_data1[:,1]]
+        #temp1 = [self.all_patient_list.index(i) for i in temp1]
+        #self.X_data1[:,1] = np.array(temp1)
         
-        temp2 = [self.patient_list2[i] for i in self.X_data2]
-        temp2 = [self.all_patient_list.index(i) for i in temp2]
-        self.X_data2 = np.array(temp2)
+        #temp2 = [self.patient_list2[i] for i in self.X_data2[:,1]]
+        #temp2 = [self.all_patient_list.index(i) for i in temp2]
+        #self.X_data2[:,1] = np.array(temp2)
         
 
     def __len__(self):
-        return len(self.X_data)
+        return len(self.X_data1)
 
     def __getitem__(self, idx):
 
-        sample = self.X_data[idx]
-        label = self.Y_data[idx]
+        sample1 = self.X_data1[idx]
+        label1 = self.Y_data1[idx]
 
-        sample = [sample, label]
+        indices = np.random.permutation(np.arange(self.X_data1.shape[0]))[:len(idx)]
+        sample2 = self.X_data2[indices]
+        label2 = self.Y_data2[indices]
+
+        sample = [sample1, label1, sample2, label2]
 
         return sample
 
