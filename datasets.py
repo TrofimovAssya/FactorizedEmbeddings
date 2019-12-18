@@ -72,7 +72,7 @@ class GeneDataset(Dataset):
 class DoubleDataset(Dataset):
     """Gene expression dataset"""
 
-    def __init__(self,root_dir='.',save_dir='.',data_file1_x='data1.npy', data_file2='data2.npy', 
+    def __init__(self,root_dir='.',save_dir='.',data_file='data1.npy', data_file2='data2.npy', 
         patient_list1 = 'patientlist1.csv', patient_list2 = 'patientlist2.csv', transform=None, masked = 0):
 
 
@@ -102,7 +102,8 @@ class DoubleDataset(Dataset):
 
         #self.masked = masked
 
-        #self.nb_gene = self.data1.shape[1]
+        self.nb_gene = np.max(self.X_data1[:,0])+1
+        self.nb_sample = np.max(self.X_data1[:,1])+1
         #self.nb_protein = self.data2.shape[1]
 
         #print (self.nb_gene)
@@ -414,7 +415,7 @@ def get_dataset(opt,exp_dir, masked=0):
         dataset = FEDomainsDataset(root_dir=opt.data_dir, save_dir = exp_dir,data_file = opt.data_file, domain_file = opt.data_domain, transform = opt.transform, masked = opt.mask, 
                                    missing = opt.missing)
     elif opt.dataset == 'doubleoutput':
-        dataset = DoubleDataset(root_dir=opt.data_dir, save_dir = exp_dir, data_file = opt.data_file, transform = opt.transform, masked = opt.mask)
+        dataset = DoubleDataset(root_dir=opt.data_dir, save_dir = exp_dir)
     else:
         raise NotImplementedError()
 
