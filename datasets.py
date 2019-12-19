@@ -78,8 +78,8 @@ class DoubleDataset(Dataset):
 
         self.X_data1 = os.path.join(root_dir, 'color_rectum_transcriptome_X_data.npy')
         self.Y_data1 = os.path.join(root_dir, 'color_rectum_transcriptome_Y_data.npy')
-        self.X_data2 = os.path.join(root_dir, 'color_rectum_proteome_X_data2.npy')
-        self.Y_data2 = os.path.join(root_dir, 'color_rectum_proteome_P_data.npy')
+        self.X_data2 = os.path.join(root_dir,'color_rectum_proteome_X_data2_repeat.npy')
+        self.Y_data2 = os.path.join(root_dir,'color_rectum_proteome_P_data_repeat.npy')
         self.X_data1 = np.load(self.X_data1)
         self.X_data2 = np.load(self.X_data2)
         self.Y_data1 = np.load(self.Y_data1)
@@ -142,10 +142,10 @@ class DoubleDataset(Dataset):
         sample1 = self.X_data1[idx]
         label1 = self.Y_data1[idx]
 
-        indices = np.random.permutation(np.arange(self.X_data1.shape[0]))[idx]
-        indices = indices%self.X_data2.shape[0]
-        sample2 = self.X_data2[indices]
-        label2 = self.Y_data2[indices]
+        #indices = np.random.permutation(np.arange(self.X_data1.shape[0]))[idx]
+        #indices = indices%self.X_data2.shape[0]
+        sample2 = self.X_data2[idx]
+        label2 = self.Y_data2[idx]
 
         sample = [sample1, label1, sample2, label2]
 
