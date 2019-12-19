@@ -403,7 +403,7 @@ class DoubleOutputMLP(nn.Module):
 
     def get_embeddings(self, x):
 
-        gene, patient1, protein, patient2 = x[:, 0], x[:, 1], x[:, 2], x[:,3]
+        gene, patient1, protein, patient2 = x[0][:, 0], x[0][:, 1], x[1][:, 0], x[1][:,1]
         # Embedding.
         gene = self.emb_1(gene.long())
         patient1 = self.emb_2(patient1.long())

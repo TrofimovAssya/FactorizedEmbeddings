@@ -113,28 +113,35 @@ def main(argv=None):
 
         for no_b, mini in enumerate(dataset):
 
-            inputs, targets = mini[0], mini[1]
+            inputs, targets, inputs2, targets2 = mini[0], mini[1], mini[2], mini[3]
+            
 
             inputs = Variable(inputs, requires_grad=False).float()
             targets = Variable(targets, requires_grad=False).float()
-            print ('got it')
+            inputs2 = Variable(inputs2, requires_grad=False).float()
+            targets2 = Variable(targets2, requires_grad=False).float()
 
             if not opt.cpu:
                 inputs = inputs.cuda(opt.gpu_selection)
                 targets = targets.cuda(opt.gpu_selection)
+                inputs2 = inputs2.cuda(opt.gpu_selection)
+                targets2 = targets2.cuda(opt.gpu_selection)
 
             # Forward pass: Compute predicted y by passing x to the model
-            y_pred = my_model(inputs).float()
+            y_pred = my_model([inputs, inputs2]).float()
 
-            if opt.save_error:
+            #if opt.save_error:
                 # Log the predicted values per sample and per gene (S.L. validation)
-                batch_inputs = mini[0].numpy()
-                predicted_values = y_pred.data.cpu().numpy()
-                train_trace[batch_inputs[:,0],batch_inputs[:,1]] = predicted_values[:,0]
+            #    batch_inputs = mini[0].numpy()
+            #    predicted_values = y_pred.data.cpu().numpy()
+            #    train_trace[batch_inputs[:,0],batch_inputs[:,1]] = predicted_values[:,0]
             targets = torch.reshape(targets,(targets.shape[0],1))
+            targets2 = torch.reshape(targets2,(targets2.shape[0],1))
             # Compute and print loss
 
-            loss = criterion(y_pred, targets)
+            loss1 = criterion(y_pred[0], targets)
+            loss2 = criterion(y_pred[1], targets2)
+            loss = loss1+loss2
             if no_b % 5 == 0:
                 print (f"Doing epoch {t},examples{no_b}/{len(dataset)}.Loss:{loss.data.cpu().numpy().reshape(1,)[0]}")
 
