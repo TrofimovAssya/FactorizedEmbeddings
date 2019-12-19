@@ -433,7 +433,7 @@ class DoubleOutputMLP(nn.Module):
 
         mlp2_output = self.last2_layer(mlp2_input)
 
-        return mlp_output1, mlp_output2
+        return mlp1_output, mlp2_output
 
     def generate_datapoint_protein(self, e, d, gpu):
         ### TODO

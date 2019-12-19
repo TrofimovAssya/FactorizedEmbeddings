@@ -110,6 +110,7 @@ def main(argv=None):
             outfname_t = '_'.join(['tissue_epoch',str(t),'prediction.npy'])
             outfname_t = os.path.join(exp_dir,outfname_t)
             train_trace = np.zeros((dataset.dataset.nb_gene, dataset.dataset.nb_patient))
+        import pdb; pdb.set_trace()
 
         for no_b, mini in enumerate(dataset):
 
@@ -128,7 +129,7 @@ def main(argv=None):
                 targets2 = targets2.cuda(opt.gpu_selection)
 
             # Forward pass: Compute predicted y by passing x to the model
-            y_pred = my_model([inputs, inputs2]).float()
+            y_pred = my_model([inputs, inputs2])
 
             #if opt.save_error:
                 # Log the predicted values per sample and per gene (S.L. validation)
