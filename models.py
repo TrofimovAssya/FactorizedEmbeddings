@@ -361,7 +361,7 @@ class TripleFactorizedMLP(nn.Module):
 class DoubleOutputMLP(nn.Module):
 
     def __init__(self, layers_size, inputs_size, emb_size=2):
-        super(TripleFactorizedMLP, self).__init__()
+        super(DoubleOutputMLP, self).__init__()
 
         self.layers_size = layers_size
         self.emb_size = emb_size
@@ -369,7 +369,6 @@ class DoubleOutputMLP(nn.Module):
 
 
         # The embedding
-        assert len(inputs_size) == 3
 
         self.emb_1 = nn.Embedding(inputs_size[0], emb_size)
         #the shared embeddings is the emb_2 middle one

@@ -80,6 +80,10 @@ class DoubleDataset(Dataset):
         self.Y_data1 = os.path.join(root_dir, 'color_rectum_transcriptome_Y_data.npy')
         self.X_data2 = os.path.join(root_dir, 'color_rectum_proteome_X_data2.npy')
         self.Y_data2 = os.path.join(root_dir, 'color_rectum_proteome_P_data.npy')
+        self.X_data1 = np.load(self.X_data1)
+        self.X_data2 = np.load(self.X_data2)
+        self.Y_data1 = np.load(self.Y_data1)
+        self.Y_data2 = np.load(self.Y_data2)
         # The dataset should be: 3 embeddings + 2 targets.
         # so for example gene expression and protein expression would be:
         # (geneID, sampleID, proteinID), (genexp, proteinexp)
@@ -104,6 +108,8 @@ class DoubleDataset(Dataset):
 
         self.nb_gene = np.max(self.X_data1[:,0])+1
         self.nb_sample = np.max(self.X_data1[:,1])+1
+        self.nb_patient = np.max(self.X_data1[:,1])+1
+        self.nb_proteins = np.max(self.X_data2[:,0])+1
         #self.nb_protein = self.data2.shape[1]
 
         #print (self.nb_gene)
@@ -136,7 +142,8 @@ class DoubleDataset(Dataset):
         sample1 = self.X_data1[idx]
         label1 = self.Y_data1[idx]
 
-        indices = np.random.permutation(np.arange(self.X_data1.shape[0]))[:len(idx)]
+        indices = np.random.permutation(np.arange(self.X_data1.shape[0]))[idx]
+        indices = indices%self.X_data2.shape[0]
         sample2 = self.X_data2[indices]
         label2 = self.Y_data2[indices]
 
@@ -157,10 +164,10 @@ class DoubleDataset(Dataset):
         return X_data, Y_data
 
     def input_size(self):
-        return self.nb_gene, self.nb_patient
+        return self.nb_gene, self.nb_patient, self.nb_proteins
 
     def additional_info(self):
-        return np.max(self.Y_data)-np.min(self.Y_data), np.min(self.Y_data)
+        return np.max(self.Y_data1)-np.min(self.Y_data1), np.min(self.Y_data1)
 
 
     def extra_info(self):
