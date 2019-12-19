@@ -451,7 +451,7 @@ class DoubleOutputMLP(nn.Module):
         mlp2_input = torch.cat([emb_3, emb_2],1)
         for layer in self.mlp2_layers:
             mlp2_input = layer(mlp2_input)
-            mlp2_input = torch.nn.tanh(mlp2_input)
+            mlp2_input = torch.nn.functional.tanh(mlp2_input)
         mlp2_output = self.last2_layer(mlp2_input)
         return mlp2_output
 

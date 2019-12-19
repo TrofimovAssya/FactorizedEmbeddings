@@ -110,7 +110,18 @@ def main(argv=None):
             outfname_t = '_'.join(['tissue_epoch',str(t),'prediction.npy'])
             outfname_t = os.path.join(exp_dir,outfname_t)
             train_trace = np.zeros((dataset.dataset.nb_gene, dataset.dataset.nb_patient))
-        import pdb; pdb.set_trace()
+        ### making predictions:
+        nb_proteins = my_model.emb_3.weight.cpu().data.numpy().shape[0]
+        nb_patients = my_model.emb_2.weight.cpu().data.numpy().shape[0]
+        predictions_protein = np.zeros((nb_patients, nb_proteins))
+        patient_embs = my_model.emb_2.weight.cpu().data.numpy()
+
+        for patient in np.arange(nb_patients):
+            new = my_model.generate_datapoint_protein(patient_embs[patient,:], gpu=2)
+            new = new.cpu().data.numpy()
+            predictions_protein[patient,:] = new[:,0]
+        np.save(f'predictions_protein_{epoch}.npy', predictions_protein)
+
 
         for no_b, mini in enumerate(dataset):
 
