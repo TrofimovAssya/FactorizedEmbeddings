@@ -435,15 +435,44 @@ class DoubleOutputMLP(nn.Module):
 
         return mlp1_output, mlp2_output
 
-    def generate_datapoint_protein(self, e, d, gpu):
-        ### TODO
+    def generate_datapoint_protein(self, patient, gpu):
+        
         #getting a datapoint embedding coordinate
-        pass
+        
+        emb_3 = self.emb_3.weight.cpu().data.numpy()
+        emb_2 = (np.ones(emb_3.shape[0]*2).reshape((emb_3.shape[0],2)))*patient
+        emb_3 = torch.FloatTensor(emb_3)
+        emb_2 = torch.FloatTensor(emb_2)
+        emb_3 = Variable(emb_3, requires_grad=False).float()
+        emb_2 = Variable(emb_2, requires_grad=False).float()
+        #if gpu:
+        emb_3 = emb_3.cuda(gpu)
+        emb_2 = emb_2.cuda(gpu)
+        mlp2_input = torch.cat([emb_3, emb_2],1)
+        for layer in self.mlp2_layers:
+            mlp2_input = layer(mlp2_input)
+            mlp2_input = torch.nn.tanh(mlp2_input)
+        mlp2_output = self.last2_layer(mlp2_input)
+        return mlp2_output
 
-    def generate_datapoint_gene(self, e, d, gpu):
-        ### TODO
+    def generate_datapoint_gene(self, patient, gpu):
+        
         #getting a datapoint embedding coordinate
-        pass
+        emb_1 = self.emb_1.weight.cpu().data.numpy()
+        emb_2 = (np.ones(emb_1.shape[0]*2).reshape((emb_1.shape[0],2)))*patient
+        emb_1 = torch.FloatTensor(emb_1)
+        emb_2 = torch.FloatTensor(emb_2)
+        emb_1 = Variable(emb_1, requires_grad=False).float()
+        emb_2 = Variable(emb_2, requires_grad=False).float()
+        #if gpu:
+        emb_1 = emb_1.cuda(gpu)
+        emb_2 = emb_2.cuda(gpu)
+        mlp1_input = torch.cat([emb_1, emb_2],1)
+        for layer in self.mlp1_layers:
+            mlp1_input = layer(mlp1_input)
+            mlp1_input = torch.nn.tanh(mlp1_input)
+        mlp1_output = self.last1_layer(mlp1_input)
+        return mlp1_output
 
 
 
