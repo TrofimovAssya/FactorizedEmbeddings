@@ -15,14 +15,24 @@ The FE model depends on:
 
 
 ### Citation:
-Manuscript submitted 2020-01-30
+
+Factorized embeddings learns rich and biologically meaningful embedding spaces using factorized tensor decomposition
+Assya Trofimov, Joseph Paul Cohen, Yoshua Bengio, Claude Perreault, and Sébastien Lemieux
+Bioinformatics. 2020 Jul; 36(Suppl 1): i417–i426.
+[Download paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7355243/)
 
 
 Workshop manuscript from 2017:
 Uncovering the Gene Usage of Human Tissue Cells with Joint Factorized Embeddings. 
 Assya Trofimov, Joseph Paul Cohen, Claude Perreault, Yoshua Bengio, Sebastien Lemieux.
 International Conference on Machine Learning (ICML) Workshop on Computational Biology (WCB), 2017.
-[Download paper](WCB_2017_paper_30.pdf)
+[Download 2017 workshop paper](WCB_2017_paper_30.pdf)
+
+
+
+### News
+Manuscript accepted for publication and oral presentation at ISMB 2020 on 2020-03-14
+Manuscript submitted 2020-01-30
 
 
 ![](imgs/fac-emb.png)
