@@ -63,7 +63,7 @@ class FactorizedMLP(nn.Module):
 
         for layer in self.mlp_layers:
             mlp_input = layer(mlp_input)
-            mlp_input = F.tanh(mlp_input)
+            mlp_input = nn.functional.relu(mlp_input)
 
         mlp_output = self.last_layer(mlp_input)
 
