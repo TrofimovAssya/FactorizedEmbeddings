@@ -16,9 +16,13 @@ The FE model depends on:
 
 For the most basic run do the following:
 ```python
-python main.py --data-dir DATA_FOLDER --data-file DATA.csv
+python main.py --data-dir DATA_FOLDER --data-file DATA.npy
 ```
 The data file should be a `.npy` file where samples are rows and features are columns. (ex: patient x gene)
+
+### Capacity:
+
+We have noticed that for very homogenous datasets, having too big of a MLP makes the embeddings more static and less informative. If you notice the embeddings are not moving, try relaunching with a lower capacity MLP (for example: one single hidden layer and 10 neurons)
 
 ### Citation:
 
