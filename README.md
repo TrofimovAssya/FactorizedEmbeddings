@@ -12,7 +12,13 @@ The FE model depends on:
 + numpy
 + pandas
 
+### Usage:
 
+For the most basic run do the following:
+```python
+python main.py --data-dir DATA_FOLDER --data-file DATA.csv
+```
+The data file should be a `.npy` file where samples are rows and features are columns. (ex: patient x gene)
 
 ### Citation:
 
